@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presta+ — Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --marine: #1F3A5C;
+    --marine-clair: #2E5580;
+    --or: #D9A628;
+    --or-clair: #F2C94C;
+    --fond: #F7F7F5;
+    --carte: #FFFFFF;
+    --texte: #1A1A1A;
+    --texte-doux: #5A6472;
+    --bordure: #E1E4E8;
+    --vert: #2E9E5B;
+    --rouge: #D64545;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--fond); color:var(--texte); font-family:'Inter', sans-serif;
+    font-size:16px; min-height:100vh;
+  }
+  .hidden{display:none !important;}
+
+  /* ---- écran de connexion ---- */
+  #login-screen{
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; padding:24px;
+  }
+  #login-screen .card{
+    width:100%; max-width:400px; background:var(--carte); border:1px solid var(--bordure);
+    border-radius:14px; padding:30px 26px; box-shadow:0 2px 12px rgba(31,58,92,0.06);
+  }
+  #login-screen h1{ font-family:'Poppins',sans-serif; font-size:20px; color:var(--marine); margin-bottom:4px; }
+  #login-screen .sub{ font-size:13px; color:var(--texte-doux); margin-bottom:20px; }
+  label{ display:block; font-size:14px; font-weight:600; color:var(--marine); margin:14px 0 6px; }
+  label:first-of-type{ margin-top:0; }
+  input{
+    width:100%; background:var(--fond); border:1.5px solid var(--bordure); color:var(--texte);
+    padding:12px 14px; border-radius:8px; font-size:15px; font-family:'Inter', sans-serif;
+  }
+  input:focus{ outline:none; border-color:var(--marine); }
+  button{ font-family:'Inter', sans-serif; cursor:pointer; }
+  .btn-primary{
+    width:100%; background:var(--marine); color:#fff; border:none; font-family:'Poppins',sans-serif;
+    font-weight:700; font-size:15px; padding:13px; border-radius:9px; margin-top:18px;
+  }
+  .btn-primary:disabled{ background:#B9C2CC; cursor:not-allowed; }
+  #login-msg{
+    margin-top:14px; font-size:14px; padding:10px 12px; border-radius:8px; display:none; font-weight:500;
+  }
+  #login-msg.error{ display:block; background:#FCE9E9; color:#B23434; border:1px solid var(--rouge); }
+
+  /* ---- dashboard ---- */
+  #dashboard{ display:none; min-height:100vh; }
+  #dashboard.show{ display:block; }
+  header.top{
+    background:var(--marine); color:#fff; padding:16px 20px; display:flex; align-items:center;
+    justify-content:space-between; flex-wrap:wrap; gap:10px;
+  }
+  header.top h1{ font-family:'Poppins',sans-serif; font-size:17px; }
+  header.top .who{ font-size:13px; opacity:0.75; }
+  #btn-logout{
+    background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.3);
+    padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600;
+  }
+  nav.tabs{
+    display:flex; gap:6px; padding:12px 20px 0; background:var(--carte); border-bottom:1px solid var(--bordure);
+    overflow-x:auto;
+  }
+  nav.tabs button{
+    background:none; border:none; padding:12px 16px; font-size:14px; font-weight:600; color:var(--texte-doux);
+    border-bottom:3px solid transparent; white-space:nowrap;
+  }
+  nav.tabs button.active{ color:var(--marine); border-bottom-color:var(--or); }
+  main{ padding:20px; max-width:1100px; margin:0 auto; }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+  .panel h2{ font-family:'Poppins',sans-serif; font-size:18px; color:var(--marine); margin-bottom:14px; }
+  .search-row{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+  .search-row input{ flex:1; min-width:200px; }
+  .list-row{
+    background:var(--carte); border:1px solid var(--bordure); border-radius:10px; padding:14px 16px;
+    margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  }
+  .list-row .info{ flex:1; min-width:200px; }
+  .list-row .title{ font-weight:700; font-size:15px; }
+  .list-row .sub{ font-size:13px; color:var(--texte-doux); margin-top:2px; }
+  .tag{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; margin-left:6px; text-transform:uppercase; letter-spacing:0.03em; }
+  .tag.role-artisan{ background:#FFF3D6; color:#8A6A0E; }
+  .tag.role-client{ background:#E4EEF9; color:var(--marine); }
+  .tag.status-active{ background:#E7F6EC; color:#1F7A44; }
+  .tag.status-suspended{ background:#FCE9E9; color:#B23434; }
+  .tag.featured{ background:#FDEFD3; color:#9C6B00; }
+  .row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn-sm{
+    border:1.5px solid var(--bordure); background:#fff; color:var(--texte); font-size:13px; font-weight:600;
+    padding:8px 12px; border-radius:7px;
+  }
+  .btn-sm.danger{ border-color:var(--rouge); color:var(--rouge); }
+  .btn-sm.warn{ border-color:#C98A12; color:#C98A12; }
+  .btn-sm.gold{ border-color:var(--or); color:#9C6B00; background:#FFF8E6; }
+  .btn-sm:disabled{ opacity:0.5; cursor:not-allowed; }
+  .empty{ color:var(--texte-doux); font-size:14px; padding:20px 0; text-align:center; }
+  .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:24px; }
+  .stat-card{ background:var(--carte); border:1px solid var(--bordure); border-radius:12px; padding:18px; text-align:center; }
+  .stat-card .num{ font-family:'Poppins',sans-serif; font-size:28px; font-weight:700; color:var(--marine); }
+  .stat-card .lbl{ font-size:12px; color:var(--texte-doux); margin-top:4px; text-transform:uppercase; letter-spacing:0.04em; }
+  .chart-box{ background:var(--carte); border:1px solid var(--bordure); border-radius:12px; padding:20px; }
+  .checkbox-row{ display:flex; align-items:center; gap:10px; }
+  .checkbox-row input[type=checkbox]{ width:auto; }
+  .roles-admin{ display:flex; gap:10px; margin-top:8px; }
+  .role-tile-admin{
+    flex:1; text-align:center; padding:14px 10px; border:2px solid var(--bordure); border-radius:10px;
+    font-weight:700; color:var(--marine); cursor:pointer; font-size:14px;
+  }
+  .role-tile-admin.selected{ border-color:var(--or); background:#FFF8E6; }
+  #loading-overlay{
+    position:fixed; inset:0; background:rgba(247,247,245,0.9); display:flex; align-items:center;
+    justify-content:center; font-size:14px; color:var(--texte-doux); z-index:999;
+  }
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(20,30,45,0.55); display:flex; align-items:center;
+    justify-content:center; z-index:1500; padding:20px;
+  }
+  .modal-box{
+    background:var(--carte); border-radius:14px; padding:24px; max-width:560px; width:100%;
+    max-height:82vh; overflow-y:auto; position:relative;
+  }
+  .modal-box .modal-close{
+    position:absolute; top:16px; right:16px; background:none; border:none; font-size:14px;
+    color:var(--texte-doux); font-weight:600;
+  }
+  .modal-box h2{ font-family:'Poppins',sans-serif; font-size:17px; color:var(--marine); margin-bottom:14px; padding-right:60px; }
+  .doc-thumb{ width:100%; max-height:280px; object-fit:contain; border-radius:8px; border:1px solid var(--bordure); margin-top:8px; background:#f5f5f5; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="card">
+    <h1>Presta+ — Administration</h1>
+    <div class="sub">Accès réservé. Connecte-toi avec ton compte administrateur.</div>
+    <label for="admin-email">Adresse e-mail</label>
+    <input type="email" id="admin-email" placeholder="prestaplus.officiel@gmail.com">
+    <label for="admin-password">Mot de passe</label>
+    <input type="password" id="admin-password" placeholder="Votre mot de passe">
+    <button class="btn-primary" id="btn-admin-login">Se connecter</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <header class="top">
+    <h1>Presta+ — Administration</h1>
+    <div style="display:flex; align-items:center; gap:14px;">
+      <span class="who" id="admin-who"></span>
+      <button id="btn-logout">Déconnexion</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-panel="panel-users" class="active">Utilisateurs</button>
+    <button data-panel="panel-ads">Annonces</button>
+    <button data-panel="panel-reports">Avis signalés</button>
+    <button data-panel="panel-stats">Statistiques</button>
+    <button data-panel="panel-featured">Mise en avant</button>
+    <button data-panel="panel-certs">Certifications<span id="certs-badge" class="hidden" style="margin-left:6px; background:var(--rouge); color:#fff; border-radius:10px; font-size:11px; padding:1px 7px;"></span></button>
+    <button data-panel="panel-messages">Messages<span id="messages-badge" class="hidden" style="margin-left:6px; background:var(--rouge); color:#fff; border-radius:10px; font-size:11px; padding:1px 7px;"></span></button>
+    <button data-panel="panel-encheres">Enchères<span id="encheres-badge" class="hidden" style="margin-left:6px; background:var(--rouge); color:#fff; border-radius:10px; font-size:11px; padding:1px 7px;"></span></button>
+    <button data-panel="panel-profils">Profils</button>
+  </nav>
+
+  <main>
+    <!-- UTILISATEURS -->
+    <div class="panel active" id="panel-users">
+      <h2>Utilisateurs</h2>
+      <div class="search-row">
+        <input type="text" id="users-search" placeholder="Rechercher par nom, email, ville...">
+      </div>
+      <div id="users-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- ANNONCES -->
+    <div class="panel" id="panel-ads">
+      <h2>Annonces publiées</h2>
+      <div class="search-row">
+        <input type="text" id="ads-search" placeholder="Rechercher par ville, métier, description...">
+      </div>
+      <div id="ads-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- AVIS SIGNALÉS -->
+    <div class="panel" id="panel-reports">
+      <h2>Avis signalés à modérer</h2>
+      <div id="reports-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- STATISTIQUES -->
+    <div class="panel" id="panel-stats">
+      <h2>Statistiques</h2>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="chart-box">
+        <canvas id="stats-chart" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- MISE EN AVANT -->
+    <div class="panel" id="panel-featured">
+      <h2>Mise en avant des artisans</h2>
+      <div class="sub" style="color:var(--texte-doux); font-size:13px; margin-bottom:16px;">
+        Choisis la position exacte de chaque artisan (3e, 5e, 10e...) dans la liste envoyée aux clients de sa ville.
+        Cette position s'applique après les artisans en tête grâce aux Enchères Ville (onglet séparé, payant).
+        Choisis "Pas de position fixe" pour désactiver.
+      </div>
+      <div class="search-row">
+        <input type="text" id="featured-search" placeholder="Rechercher un artisan par nom ou ville...">
+      </div>
+      <div id="featured-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- CERTIFICATIONS -->
+    <div class="panel" id="panel-certs">
+      <h2>Certifications professionnelles</h2>
+      <div class="sub" style="color:var(--texte-doux); font-size:13px; margin-bottom:16px;">
+        Dossiers K-bis + assurance RC décennale envoyés par les artisans. Approuve pour afficher la pastille
+        de validation sur leur profil, ou refuse s'ils sont invalides.
+      </div>
+      <div id="certs-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- MESSAGES (contact direct depuis l'application) -->
+    <div class="panel" id="panel-messages">
+      <h2>Messages reçus via "Contacter Presta+"</h2>
+      <div id="messages-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- ENCHÈRES VILLE -->
+    <div class="panel" id="panel-encheres">
+      <h2>Enchères Ville</h2>
+      <div class="sub" style="color:var(--texte-doux); font-size:13px; margin-bottom:16px;">
+        Demandes d'artisans souhaitant être mis en avant contre paiement. Valide une fois le paiement confirmé
+        (par un autre moyen). Le montant le plus élevé passe en tête des recommandations côté client, dans la ville concernée.
+      </div>
+      <div class="search-row">
+        <input type="text" id="encheres-search" placeholder="Rechercher par artisan ou ville...">
+      </div>
+      <div id="encheres-list"><div class="empty">Chargement...</div></div>
+    </div>
+
+    <!-- PROFILS (création manuelle) -->
+    <div class="panel" id="panel-profils">
+      <h2>Créer un profil</h2>
+      <div class="sub" style="color:var(--texte-doux); font-size:13px; margin-bottom:16px;">
+        Crée directement une fiche client ou artisan (sans passer par l'inscription). Ce profil apparaîtra dans
+        les listes et recherches, mais ne pourra pas se connecter tant qu'aucun compte n'est associé.
+      </div>
+      <label>Type de profil</label>
+      <div class="roles-admin" id="profil-role-tiles">
+        <div class="role-tile-admin selected" data-role="client">Client</div>
+        <div class="role-tile-admin" data-role="artisan">Artisan</div>
+      </div>
+
+      <div id="profil-fields-client">
+        <label for="profil-nom">Nom</label>
+        <input type="text" id="profil-nom" placeholder="Dupont">
+        <label for="profil-prenom">Prénom</label>
+        <input type="text" id="profil-prenom" placeholder="Jean">
+      </div>
+      <div id="profil-fields-artisan" class="hidden">
+        <label for="profil-denomination">Dénomination sociale</label>
+        <input type="text" id="profil-denomination" placeholder="Dupont Plomberie">
+        <label for="profil-metiers">Métiers (séparés par une virgule)</label>
+        <input type="text" id="profil-metiers" placeholder="Plombier, Chauffagiste">
+      </div>
+
+      <label for="profil-ville">Ville</label>
+      <input type="text" id="profil-ville" placeholder="Paris">
+      <label for="profil-telephone">Téléphone (optionnel)</label>
+      <input type="text" id="profil-telephone" placeholder="06 00 00 00 00">
+      <label for="profil-email">E-mail (optionnel)</label>
+      <input type="email" id="profil-email" placeholder="contact@exemple.com">
+      <label for="profil-photo">Photo (optionnel)</label>
+      <input type="file" id="profil-photo" accept="image/*">
+      <img id="profil-photo-preview" class="hidden" style="width:90px; height:90px; object-fit:cover; border-radius:50%; margin-top:8px; display:block;">
+
+      <button class="btn-sm gold" id="btn-create-profil" style="margin-top:16px; padding:10px 18px; font-size:14px;">Créer le profil</button>
+      <div id="profil-create-msg" class="sub" style="margin-top:10px;"></div>
+
+      <h2 style="margin-top:34px;">Profils créés depuis la console</h2>
+      <div class="search-row">
+        <input type="text" id="profils-search" placeholder="Rechercher par nom ou ville...">
+      </div>
+      <div id="profils-list"><div class="empty">Chargement...</div></div>
+    </div>
+  </main>
+</div>
+
+<div id="loading-overlay" class="hidden">Chargement...</div>
+<div id="modal-root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+    setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, doc, getDocs, getDoc, deleteDoc, updateDoc, setDoc, query, where, addDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDnqz1ZbSXcUnxRTi4LZCMzdwo8mTdiQBw",
+    authDomain: "travaux-presto.firebaseapp.com",
+    projectId: "travaux-presto",
+    storageBucket: "travaux-presto.firebasestorage.app",
+    messagingSenderId: "256371327938",
+    appId: "1:256371327938:web:a993a9a55b64dbc0334c5b"
+  };
+
+  const ADMIN_EMAIL = "prestaplus.officiel@gmail.com";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const loginScreen = document.getElementById('login-screen');
+  const dashboard = document.getElementById('dashboard');
+  const loginMsg = document.getElementById('login-msg');
+  const overlay = document.getElementById('loading-overlay');
+
+  function showLoginMsg(text){ loginMsg.textContent = text; loginMsg.className = 'error'; }
+  function showOverlay(show){ overlay.classList.toggle('hidden', !show); }
+
+  document.getElementById('btn-admin-login').addEventListener('click', async () => {
+    const email = document.getElementById('admin-email').value.trim();
+    const password = document.getElementById('admin-password').value;
+    if(!email || !password){ showLoginMsg("Merci de remplir tous les champs."); return; }
+    const btn = document.getElementById('btn-admin-login');
+    btn.disabled = true;
+    try{
+      await setPersistence(auth, browserLocalPersistence);
+      await signInWithEmailAndPassword(auth, email, password);
+    }catch(err){
+      showLoginMsg("E-mail ou mot de passe incorrect.");
+    }
+    btn.disabled = false;
+  });
+
+  document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+
+  onAuthStateChanged(auth, async (user) => {
+    if(!user){
+      dashboard.classList.remove('show');
+      loginScreen.classList.remove('hidden');
+      return;
+    }
+    if(user.email !== ADMIN_EMAIL){
+      showLoginMsg("Ce compte n'a pas accès à l'administration.");
+      await signOut(auth);
+      return;
+    }
+    loginScreen.classList.add('hidden');
+    dashboard.classList.add('show');
+    document.getElementById('admin-who').textContent = user.email;
+    initDashboard();
+  });
+
+  // ---------- NAVIGATION ONGLETS ----------
+  let dashboardInited = false;
+  document.querySelectorAll('nav.tabs button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.panel).classList.add('active');
+    });
+  });
+
+  // ---------- DONNÉES EN MÉMOIRE ----------
+  let allUsers = [];
+  let allAds = [];
+  let allReports = [];
+  let allCalls = [];
+  let allCallsCount = 0;
+  let allCerts = [];
+  let allMessages = [];
+  let allEncheres = [];
+
+  async function initDashboard(){
+    if(dashboardInited) return;
+    dashboardInited = true;
+    showOverlay(true);
+    try{
+      await Promise.all([loadUsers(), loadAds(), loadReports(), loadCallsCount(), loadCerts(), loadMessages(), loadEncheres()]);
+      renderUsers();
+      renderAds();
+      renderReports();
+      renderStats();
+      renderFeatured();
+      renderCerts();
+      renderMessages();
+      renderEncheres();
+      renderProfils();
+    }catch(e){
+      console.error("Erreur chargement admin:", e);
+    }
+    showOverlay(false);
+  }
+
+  async function loadUsers(){
+    const snap = await getDocs(collection(db, "users"));
+    allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+  }
+  async function loadAds(){
+    const snap = await getDocs(collection(db, "ads"));
+    allAds = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  async function loadReports(){
+    const snap = await getDocs(collection(db, "reports"));
+    allReports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  async function loadCallsCount(){
+    const snap = await getDocs(collection(db, "calls"));
+    allCalls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allCallsCount = snap.size;
+  }
+  async function loadCerts(){
+    const snap = await getDocs(collection(db, "certifications"));
+    allCerts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+  async function loadMessages(){
+    const q = query(collection(db, "messages"), where("toId", "==", "admin"));
+    const snap = await getDocs(q);
+    allMessages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allMessages.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }
+  async function loadEncheres(){
+    const snap = await getDocs(collection(db, "encheres"));
+    allEncheres = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    allEncheres.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }
+  function resizeImageToDataUrl(file, maxDim, quality){ return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => { const img = new Image(); img.onerror = reject; img.onload = () => { let w = img.naturalWidth, h = img.naturalHeight; if(w > maxDim || h > maxDim){ if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; } else { w = Math.round(w * maxDim / h); h = maxDim; } } const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', quality)); }; img.src = reader.result; }; reader.readAsDataURL(file); }); }
+
+  // ---------- UTILISATEURS ----------
+  function renderUsers(){
+    const term = document.getElementById('users-search').value.trim().toLowerCase();
+    const box = document.getElementById('users-list');
+    const filtered = allUsers.filter(u => {
+      if(!term) return true;
+      const hay = [u.nom, u.prenom, u.email, u.ville].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(term);
+    });
+    if(!filtered.length){ box.innerHTML = '<div class="empty">Aucun utilisateur trouvé.</div>'; return; }
+    box.innerHTML = '';
+    filtered.forEach(u => {
+      const suspended = u.status === 'suspended';
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      el.innerHTML = `
+        <div class="info">
+          <div class="title">${u.prenom||''} ${u.nom||''}
+            <span class="tag role-${u.role}">${u.role === 'artisan' ? 'Artisan' : 'Client'}</span>
+            <span class="tag status-${suspended ? 'suspended' : 'active'}">${suspended ? 'Suspendu' : 'Actif'}</span>
+            ${u.featured ? '<span class="tag featured">Mis en avant</span>' : ''}
+          </div>
+          <div class="sub">${u.email || ''} — ${u.ville || 'ville non renseignée'}</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn-sm warn" data-action="toggle-suspend">${suspended ? 'Réactiver' : 'Suspendre'}</button>
+          <button class="btn-sm danger" data-action="delete">Supprimer</button>
+        </div>`;
+      el.querySelector('[data-action="toggle-suspend"]').addEventListener('click', async () => {
+        await updateDoc(doc(db, "users", u.uid), { status: suspended ? 'active' : 'suspended' });
+        u.status = suspended ? 'active' : 'suspended';
+        renderUsers();
+      });
+      el.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+        if(!confirm(`Supprimer définitivement le compte de ${u.prenom||''} ${u.nom||''} ?\n\nNote : ceci supprime son profil Presta+ (annonces, avis) mais pas son compte de connexion Firebase — si besoin de le bloquer complètement, utilise plutôt "Suspendre".`)) return;
+        await deleteDoc(doc(db, "users", u.uid));
+        allUsers = allUsers.filter(x => x.uid !== u.uid);
+        renderUsers();
+        renderStats();
+      });
+      box.appendChild(el);
+    });
+  }
+  document.getElementById('users-search').addEventListener('input', renderUsers);
+
+  // ---------- ANNONCES ----------
+  function renderAds(){
+    const term = document.getElementById('ads-search').value.trim().toLowerCase();
+    const box = document.getElementById('ads-list');
+    const filtered = allAds.filter(a => {
+      if(!term) return true;
+      const hay = [a.ville, a.metier, a.description].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(term);
+    });
+    if(!filtered.length){ box.innerHTML = '<div class="empty">Aucune annonce trouvée.</div>'; return; }
+    box.innerHTML = '';
+    filtered.forEach(a => {
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      el.innerHTML = `
+        <div class="info">
+          <div class="title">${a.metier || 'Annonce'} <span class="tag status-${a.status === 'ouverte' ? 'active' : 'suspended'}">${a.status === 'ouverte' ? 'Ouverte' : 'Fermée'}</span></div>
+          <div class="sub">${a.ville || ''} — ${(a.description || '').slice(0,100)}</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn-sm danger" data-action="delete">Supprimer</button>
+        </div>`;
+      el.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+        if(!confirm("Supprimer cette annonce ?")) return;
+        await deleteDoc(doc(db, "ads", a.id));
+        allAds = allAds.filter(x => x.id !== a.id);
+        renderAds();
+        renderStats();
+      });
+      box.appendChild(el);
+    });
+  }
+  document.getElementById('ads-search').addEventListener('input', renderAds);
+
+  // ---------- AVIS SIGNALÉS ----------
+  function renderReports(){
+    const box = document.getElementById('reports-list');
+    const pending = allReports.filter(r => r.status !== 'resolu');
+    if(!pending.length){ box.innerHTML = '<div class="empty">Aucun signalement en attente.</div>'; return; }
+    box.innerHTML = '';
+    pending.forEach(r => {
+      const isUser = r.type === 'utilisateur';
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      if(isUser){
+        el.innerHTML = `
+          <div class="info">
+            <div class="title">Utilisateur signalé : ${r.reportedName || r.reportedUid || '—'}</div>
+            <div class="sub">Par ${r.reporterName || r.reporterUid || '—'} — motif : ${r.motif || '—'}</div>
+          </div>
+          <div class="row-actions">
+            <button class="btn-sm danger" data-action="suspend-user">Suspendre ce compte</button>
+            <button class="btn-sm" data-action="dismiss">Ignorer</button>
+          </div>`;
+        el.querySelector('[data-action="suspend-user"]').addEventListener('click', async () => {
+          if(!r.reportedUid){ alert('Utilisateur introuvable.'); return; }
+          if(!confirm(`Suspendre le compte de ${r.reportedName || r.reportedUid} ?`)) return;
+          await updateDoc(doc(db, "users", r.reportedUid), { status: 'suspended' }).catch(()=>{});
+          const u = allUsers.find(x => x.uid === r.reportedUid);
+          if(u) u.status = 'suspended';
+          await updateDoc(doc(db, "reports", r.id), { status: 'resolu' });
+          r.status = 'resolu';
+          renderReports(); renderUsers();
+        });
+      } else {
+        el.innerHTML = `
+          <div class="info">
+            <div class="title">Avis signalé</div>
+            <div class="sub">ID avis : ${r.reviewId || '—'} — artisan : ${r.artisanId || '—'} — motif : ${r.motif || '—'}</div>
+          </div>
+          <div class="row-actions">
+            <button class="btn-sm danger" data-action="delete-review">Supprimer l'avis</button>
+            <button class="btn-sm" data-action="dismiss">Ignorer le signalement</button>
+          </div>`;
+        el.querySelector('[data-action="delete-review"]').addEventListener('click', async () => {
+          if(!confirm("Supprimer cet avis définitivement ?")) return;
+          if(r.reviewId){ await deleteDoc(doc(db, "reviews", r.reviewId)).catch(()=>{}); }
+          await updateDoc(doc(db, "reports", r.id), { status: 'resolu' });
+          r.status = 'resolu';
+          renderReports();
+        });
+      }
+      el.querySelector('[data-action="dismiss"]').addEventListener('click', async () => {
+        await updateDoc(doc(db, "reports", r.id), { status: 'resolu' });
+        r.status = 'resolu';
+        renderReports();
+      });
+      box.appendChild(el);
+    });
+  }
+
+  // ---------- STATISTIQUES ----------
+  let chartInstance = null;
+  function renderStats(){
+    const totalUsers = allUsers.length;
+    const artisans = allUsers.filter(u => u.role === 'artisan');
+    const clients = allUsers.filter(u => u.role === 'client');
+    const artisansActifs = artisans.filter(u => u.status !== 'suspended' && u.disponible === true).length;
+    const clientsActifs = clients.filter(u => u.status !== 'suspended').length;
+    const totalAds = allAds.length;
+
+    const grid = document.getElementById('stats-grid');
+    grid.innerHTML = `
+      <div class="stat-card" data-stat="users"><div class="num">${totalUsers}</div><div class="lbl">Utilisateurs</div></div>
+      <div class="stat-card" data-stat="artisans"><div class="num">${artisans.length}</div><div class="lbl">Artisans</div></div>
+      <div class="stat-card" data-stat="clients"><div class="num">${clients.length}</div><div class="lbl">Clients</div></div>
+      <div class="stat-card" data-stat="artisansActifs"><div class="num">${artisansActifs}</div><div class="lbl">Artisans actifs</div></div>
+      <div class="stat-card" data-stat="clientsActifs"><div class="num">${clientsActifs}</div><div class="lbl">Clients actifs</div></div>
+      <div class="stat-card" data-stat="ads"><div class="num">${totalAds}</div><div class="lbl">Annonces</div></div>
+      <div class="stat-card" data-stat="calls"><div class="num">${allCallsCount}</div><div class="lbl">Appels</div></div>
+    `;
+    grid.querySelectorAll('.stat-card').forEach(card => {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => openStatDrilldown(card.dataset.stat));
+    });
+
+    const ctx = document.getElementById('stats-chart');
+    const data = {
+      labels: ['Utilisateurs', 'Artisans', 'Clients', 'Artisans actifs', 'Clients actifs', 'Annonces', 'Appels'],
+      datasets: [{
+        label: 'Total',
+        data: [totalUsers, artisans.length, clients.length, artisansActifs, clientsActifs, totalAds, allCallsCount],
+        backgroundColor: ['#1F3A5C','#D9A628','#2E5580','#F2C94C','#2E9E5B','#5A6472','#D64545']
+      }]
+    };
+    if(chartInstance){ chartInstance.data = data; chartInstance.update(); return; }
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data,
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+  }
+
+  function closeModal(){ document.getElementById('modal-root').innerHTML = ''; }
+
+  // Chaque statistique correspond à un sous-ensemble de comptes/éléments, avec une action
+  // de "réinitialisation" qui retire l'élément de ce sous-ensemble (un par un).
+  function openStatDrilldown(key){
+    const configs = {
+      users: { title: 'Tous les utilisateurs', items: allUsers, label: u => `${u.prenom||''} ${u.nom||''} (${u.role})`, sub: u => u.email || '', resetLabel: 'Supprimer', reset: async u => { await deleteDoc(doc(db, "users", u.uid)); allUsers = allUsers.filter(x=>x.uid!==u.uid); } },
+      artisans: { title: 'Artisans', items: allUsers.filter(u=>u.role==='artisan'), label: u => `${u.prenom||''} ${u.nom||''}`, sub: u => u.ville || '', resetLabel: 'Supprimer', reset: async u => { await deleteDoc(doc(db, "users", u.uid)); allUsers = allUsers.filter(x=>x.uid!==u.uid); } },
+      clients: { title: 'Clients', items: allUsers.filter(u=>u.role==='client'), label: u => `${u.prenom||''} ${u.nom||''}`, sub: u => u.ville || '', resetLabel: 'Supprimer', reset: async u => { await deleteDoc(doc(db, "users", u.uid)); allUsers = allUsers.filter(x=>x.uid!==u.uid); } },
+      artisansActifs: { title: 'Artisans actifs', items: allUsers.filter(u=>u.role==='artisan' && u.status!=='suspended' && u.disponible===true), label: u => `${u.prenom||''} ${u.nom||''}`, sub: u => u.ville || '', resetLabel: 'Rendre indisponible', reset: async u => { await updateDoc(doc(db,"users",u.uid), { disponible: false }); u.disponible = false; } },
+      clientsActifs: { title: 'Clients actifs', items: allUsers.filter(u=>u.role==='client' && u.status!=='suspended'), label: u => `${u.prenom||''} ${u.nom||''}`, sub: u => u.ville || '', resetLabel: 'Suspendre', reset: async u => { await updateDoc(doc(db,"users",u.uid), { status: 'suspended' }); u.status = 'suspended'; } },
+      ads: { title: 'Annonces publiées', items: allAds, label: a => a.metier || 'Annonce', sub: a => a.ville || '', resetLabel: 'Supprimer', reset: async a => { await deleteDoc(doc(db, "ads", a.id)); allAds = allAds.filter(x=>x.id!==a.id); } },
+      calls: { title: 'Appels', items: allCalls, label: c => (c.callerName || 'Appel') + (c.type==='video' ? ' (vidéo)' : ''), sub: c => c.status || '', resetLabel: 'Supprimer', reset: async c => { await deleteDoc(doc(db, "calls", c.id)); allCalls = allCalls.filter(x=>x.id!==c.id); } }
+    };
+    const cfg = configs[key];
+    if(!cfg) return;
+    renderDrilldown(cfg, key);
+  }
+
+  function renderDrilldown(cfg, key){
+    const root = document.getElementById('modal-root');
+    const rows = cfg.items.length
+      ? cfg.items.map((item, i) => `
+          <div class="list-row" data-i="${i}">
+            <div class="info"><div class="title">${cfg.label(item)}</div><div class="sub">${cfg.sub(item)}</div></div>
+            <div class="row-actions"><button class="btn-sm warn" data-action="reset">${cfg.resetLabel}</button></div>
+          </div>`).join('')
+      : '<div class="empty">Aucun élément.</div>';
+    root.innerHTML = `
+      <div class="modal-bg" id="drill-bg">
+        <div class="modal-box">
+          <button class="modal-close" id="drill-close">Fermer</button>
+          <h2>${cfg.title} (${cfg.items.length})</h2>
+          <div id="drill-rows">${rows}</div>
+        </div>
+      </div>`;
+    document.getElementById('drill-close').addEventListener('click', closeModal);
+    document.getElementById('drill-bg').addEventListener('click', (e) => { if(e.target.id==='drill-bg') closeModal(); });
+    root.querySelectorAll('[data-action="reset"]').forEach((btn, i) => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try{
+          await cfg.reset(cfg.items[i]);
+          renderStats();
+          renderUsers();
+          renderAds();
+          openStatDrilldown(key);
+        }catch(e){ console.error(e); btn.disabled = false; }
+      });
+    });
+  }
+
+  // ---------- MISE EN AVANT ----------
+  function renderFeatured(){
+    const term = document.getElementById('featured-search').value.trim().toLowerCase();
+    const box = document.getElementById('featured-list');
+    const artisans = allUsers.filter(u => u.role === 'artisan').filter(u => {
+      if(!term) return true;
+      const hay = [u.nom, u.prenom, u.ville, ...(u.villesIntervention||[])].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(term);
+    });
+    if(!artisans.length){ box.innerHTML = '<div class="empty">Aucun artisan trouvé.</div>'; return; }
+    box.innerHTML = '';
+    const positionOptions = ['<option value="">Pas de position fixe</option>']
+      .concat(Array.from({length: 30}, (_, i) => i + 1).map(n => `<option value="${n}">${n}${n===1?'re':'e'} position</option>`))
+      .join('');
+    artisans.forEach(u => {
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      el.innerHTML = `
+        <div class="info">
+          <div class="title">${u.prenom||''} ${u.nom||''}
+            ${u.featuredPosition ? `<span class="tag featured">${u.featuredPosition}${u.featuredPosition===1?'re':'e'} position</span>` : ''}
+          </div>
+          <div class="sub">${(u.villesIntervention||[u.ville]).filter(Boolean).join(', ')}</div>
+          <select data-role="position-select" style="margin-top:8px; max-width:220px;">${positionOptions}</select>
+        </div>`;
+      el.querySelector('[data-role="position-select"]').value = u.featuredPosition || '';
+      el.querySelector('[data-role="position-select"]').addEventListener('change', async (e) => {
+        const val = e.target.value ? parseInt(e.target.value, 10) : null;
+        const payload = val
+          ? { featured: true, featuredPosition: val, featuredAt: Date.now() }
+          : { featured: false, featuredPosition: null };
+        await updateDoc(doc(db, "users", u.uid), payload);
+        u.featured = !!val; u.featuredPosition = val;
+        renderFeatured();
+      });
+      box.appendChild(el);
+    });
+  }
+  document.getElementById('featured-search').addEventListener('input', renderFeatured);
+
+  // ---------- CERTIFICATIONS ----------
+  function renderCerts(){
+    const box = document.getElementById('certs-list');
+    const pending = allCerts.filter(c => c.status === 'en_attente');
+    const badge = document.getElementById('certs-badge');
+    if(pending.length){ badge.textContent = pending.length; badge.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); }
+
+    if(!allCerts.length){ box.innerHTML = '<div class="empty">Aucune demande de certification.</div>'; return; }
+    box.innerHTML = '';
+    // en attente d'abord, puis historique (approuvé/refusé)
+    const sorted = [...pending, ...allCerts.filter(c => c.status !== 'en_attente')];
+    sorted.forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      el.style.flexDirection = 'column';
+      el.style.alignItems = 'stretch';
+      const statusTag = c.status === 'approuve' ? '<span class="tag status-active">Approuvé</span>'
+        : c.status === 'refuse' ? '<span class="tag status-suspended">Refusé</span>'
+        : c.status === 'retire' ? '<span class="tag status-suspended">Certification retirée</span>'
+        : '<span class="tag featured">En attente</span>';
+      el.innerHTML = `
+        <div class="info">
+          <div class="title">${c.artisanName || c.artisanId || '—'} ${statusTag}</div>
+          <div class="sub">${c.artisanEmail || ''}</div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:140px;">
+            <div class="sub" style="margin-bottom:4px;">K-bis</div>
+            <img class="doc-thumb" src="${c.kbisImage}" style="cursor:zoom-in;" data-zoom="${c.kbisImage}">
+          </div>
+          <div style="flex:1; min-width:140px;">
+            <div class="sub" style="margin-bottom:4px;">Assurance RC décennale</div>
+            <img class="doc-thumb" src="${c.assuranceImage}" style="cursor:zoom-in;" data-zoom="${c.assuranceImage}">
+          </div>
+        </div>
+        ${c.status === 'en_attente' ? `
+        <div class="row-actions" style="margin-top:12px;">
+          <button class="btn-sm gold" data-action="approve">Approuver</button>
+          <button class="btn-sm danger" data-action="refuse">Refuser</button>
+        </div>` : ''}
+        ${c.status === 'approuve' ? `
+        <div class="row-actions" style="margin-top:12px;">
+          <button class="btn-sm warn" data-action="revoke">Suspendre (temporaire)</button>
+        </div>` : ''}
+        <div class="row-actions" style="margin-top:8px;">
+          <button class="btn-sm danger" data-action="delete-cert">Supprimer définitivement</button>
+        </div>`;
+      el.querySelectorAll('[data-zoom]').forEach(img => {
+        img.addEventListener('click', () => {
+          const root = document.getElementById('modal-root');
+          root.innerHTML = `<div class="modal-bg" id="zoom-bg"><div class="modal-box"><button class="modal-close" id="zoom-close">Fermer</button><h2>Document</h2><img src="${img.dataset.zoom}" style="width:100%; border-radius:8px;"></div></div>`;
+          document.getElementById('zoom-close').addEventListener('click', closeModal);
+          document.getElementById('zoom-bg').addEventListener('click', (e) => { if(e.target.id==='zoom-bg') closeModal(); });
+        });
+      });
+      if(c.status === 'en_attente'){
+        el.querySelector('[data-action="approve"]').addEventListener('click', async () => {
+          await updateDoc(doc(db, "certifications", c.id), { status: 'approuve', reviewedAt: Date.now() });
+          if(c.artisanId) await updateDoc(doc(db, "users", c.artisanId), { certificationStatus: 'certifie' }).catch(()=>{});
+          c.status = 'approuve';
+          const u = allUsers.find(x => x.uid === c.artisanId);
+          if(u) u.certificationStatus = 'certifie';
+          renderCerts();
+        });
+        el.querySelector('[data-action="refuse"]').addEventListener('click', async () => {
+          if(!confirm("Refuser ce dossier de certification ?")) return;
+          await updateDoc(doc(db, "certifications", c.id), { status: 'refuse', reviewedAt: Date.now() });
+          if(c.artisanId) await updateDoc(doc(db, "users", c.artisanId), { certificationStatus: 'refuse' }).catch(()=>{});
+          c.status = 'refuse';
+          const u = allUsers.find(x => x.uid === c.artisanId);
+          if(u) u.certificationStatus = 'refuse';
+          renderCerts();
+        });
+      }
+      if(c.status === 'approuve'){
+        el.querySelector('[data-action="revoke"]').addEventListener('click', async () => {
+          if(!confirm(`Suspendre la certification de ${c.artisanName || 'cet artisan'} ? La pastille disparaît immédiatement. Il pourra soumettre un nouveau dossier (ex. assurance renouvelée) pour la récupérer.`)) return;
+          await updateDoc(doc(db, "certifications", c.id), { status: 'retire', reviewedAt: Date.now() });
+          if(c.artisanId) await updateDoc(doc(db, "users", c.artisanId), { certificationStatus: 'aucune' }).catch(()=>{});
+          c.status = 'retire';
+          const u = allUsers.find(x => x.uid === c.artisanId);
+          if(u) u.certificationStatus = 'aucune';
+          renderCerts();
+        });
+      }
+      el.querySelector('[data-action="delete-cert"]').addEventListener('click', async () => {
+        if(!confirm(`Supprimer définitivement ce dossier de certification (${c.artisanName || 'artisan'}) ? Les documents seront effacés et cette entrée disparaîtra de la liste. Cette action est irréversible.`)) return;
+        await deleteDoc(doc(db, "certifications", c.id));
+        allCerts = allCerts.filter(x => x.id !== c.id);
+        // Si ce dossier était celui qui donnait son statut actuel à l'artisan, on le remet à zéro.
+        if(c.artisanId){
+          const u = allUsers.find(x => x.uid === c.artisanId);
+          if(u && (c.status === 'approuve' || c.status === 'en_attente')){
+            await updateDoc(doc(db, "users", c.artisanId), { certificationStatus: 'aucune' }).catch(()=>{});
+            u.certificationStatus = 'aucune';
+          }
+        }
+        renderCerts();
+      });
+      box.appendChild(el);
+    });
+  }
+
+  // ---------- MESSAGES (contact direct) ----------
+  function renderMessages(){
+    const box = document.getElementById('messages-list');
+    const badge = document.getElementById('messages-badge');
+    const unread = allMessages.filter(m => !m.read).length;
+    if(unread){ badge.textContent = unread; badge.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); }
+
+    if(!allMessages.length){ box.innerHTML = '<div class="empty">Aucun message reçu pour l\'instant.</div>'; return; }
+    box.innerHTML = '';
+    allMessages.forEach(m => {
+      const date = m.createdAt?.seconds ? new Date(m.createdAt.seconds * 1000).toLocaleString('fr-FR') : '';
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      el.style.flexDirection = 'column';
+      el.style.alignItems = 'stretch';
+      el.innerHTML = `
+        <div class="info">
+          <div class="title">${m.fromName || 'Utilisateur'} ${!m.read ? '<span class="tag status-suspended">Nouveau</span>' : ''}</div>
+          <div class="sub">${date}</div>
+        </div>
+        <div style="margin-top:8px; font-size:14px;">${m.text || ''}</div>
+        ${m.photo ? `<img src="${m.photo}" style="max-width:220px; border-radius:8px; margin-top:8px;">` : ''}
+        <div style="margin-top:10px;">
+          <textarea data-role="reply-text" placeholder="Répondre..." style="width:100%; min-height:50px; border:1.5px solid var(--bordure); border-radius:8px; padding:8px; font-family:'Inter',sans-serif; font-size:14px;"></textarea>
+          <div class="row-actions" style="margin-top:8px;">
+            <button class="btn-sm gold" data-action="reply">Envoyer la réponse</button>
+            ${!m.read ? `<button class="btn-sm" data-action="mark-read">Marquer comme lu</button>` : ''}
+            <button class="btn-sm danger" data-action="delete-msg">Supprimer</button>
+          </div>
+        </div>`;
+      el.querySelector('[data-action="reply"]').addEventListener('click', async (e) => {
+        const text = el.querySelector('[data-role="reply-text"]').value.trim();
+        if(!text || !m.fromId) return;
+        e.target.disabled = true;
+        try{
+          await addDoc(collection(db, "messages"), {
+            fromId: 'admin', toId: m.fromId,
+            fromName: "Presta+", photo: null,
+            text, read: false, createdAt: serverTimestamp()
+          });
+          if(!m.read){ await updateDoc(doc(db, "messages", m.id), { read: true }); m.read = true; }
+          el.querySelector('[data-role="reply-text"]').value = '';
+          renderMessages();
+        }catch(err){ console.error(err); e.target.disabled = false; }
+      });
+      const markBtn = el.querySelector('[data-action="mark-read"]');
+      if(markBtn){
+        markBtn.addEventListener('click', async () => {
+          await updateDoc(doc(db, "messages", m.id), { read: true });
+          m.read = true;
+          renderMessages();
+        });
+      }
+      el.querySelector('[data-action="delete-msg"]').addEventListener('click', async () => {
+        if(!confirm("Supprimer ce message ?")) return;
+        await deleteDoc(doc(db, "messages", m.id));
+        allMessages = allMessages.filter(x => x.id !== m.id);
+        renderMessages();
+      });
+      box.appendChild(el);
+    });
+  }
+
+  // ---------- ENCHÈRES VILLE ----------
+  function bestEncheresByArtisan(){
+    // Pour chaque (artisan, ville), on ne garde que l'enchère validée la plus récente = montant courant.
+    const best = {};
+    allEncheres.filter(e => e.status === 'validee').forEach(e => {
+      const key = e.artisanUid + '|' + e.ville;
+      const t = e.createdAt?.seconds || 0;
+      if(!best[key] || t > best[key].t) best[key] = { ...e, t };
+    });
+    return Object.values(best);
+  }
+
+  function renderEncheres(){
+    const term = document.getElementById('encheres-search').value.trim().toLowerCase();
+    const box = document.getElementById('encheres-list');
+    const badge = document.getElementById('encheres-badge');
+    const pending = allEncheres.filter(e => e.status === 'en_attente');
+    if(pending.length){ badge.textContent = pending.length; badge.classList.remove('hidden'); }
+    else { badge.classList.add('hidden'); }
+
+    const matchesTerm = (e) => {
+      if(!term) return true;
+      return [e.artisanName, e.ville].filter(Boolean).join(' ').toLowerCase().includes(term);
+    };
+
+    let html = '';
+
+    // --- Demandes en attente de validation ---
+    const pendingFiltered = pending.filter(matchesTerm);
+    html += `<h3 style="font-size:15px; color:var(--marine); margin-bottom:10px;">Demandes en attente (${pendingFiltered.length})</h3>`;
+    html += pendingFiltered.length ? '<div id="ench-pending-box"></div>' : '<div class="empty">Aucune demande en attente.</div>';
+
+    // --- Classement actuel par ville ---
+    const current = bestEncheresByArtisan().filter(matchesTerm);
+    const byVille = {};
+    current.forEach(e => { (byVille[e.ville] = byVille[e.ville] || []).push(e); });
+    Object.values(byVille).forEach(arr => arr.sort((a,b) => (b.montant - a.montant) || (a.t - b.t)));
+
+    html += `<h3 style="font-size:15px; color:var(--marine); margin:26px 0 10px;">Classement actuel par ville</h3>`;
+    if(!Object.keys(byVille).length){
+      html += '<div class="empty">Aucune enchère active pour le moment.</div>';
+    } else {
+      html += '<div id="ench-current-box"></div>';
+    }
+
+    box.innerHTML = html;
+
+    // Rendu des demandes en attente
+    if(pendingFiltered.length){
+      const pendingBox = document.getElementById('ench-pending-box');
+      pendingFiltered.forEach(e => {
+        const el = document.createElement('div');
+        el.className = 'list-row';
+        el.innerHTML = `
+          <div class="info">
+            <div class="title">${e.artisanName || '—'} <span class="tag featured">${e.montant} € — ${e.ville}</span></div>
+          </div>
+          <div class="row-actions">
+            <button class="btn-sm gold" data-action="valider">Valider</button>
+            <button class="btn-sm danger" data-action="refuser">Refuser</button>
+          </div>`;
+        el.querySelector('[data-action="valider"]').addEventListener('click', async () => {
+          await updateDoc(doc(db, "encheres", e.id), { status: 'validee', reviewedAt: Date.now() });
+          e.status = 'validee';
+          renderEncheres();
+        });
+        el.querySelector('[data-action="refuser"]').addEventListener('click', async () => {
+          if(!confirm(`Refuser l'enchère de ${e.artisanName || 'cet artisan'} (${e.montant} € — ${e.ville}) ?`)) return;
+          await updateDoc(doc(db, "encheres", e.id), { status: 'refusee', reviewedAt: Date.now() });
+          e.status = 'refusee';
+          renderEncheres();
+        });
+        pendingBox.appendChild(el);
+      });
+    }
+
+    // Rendu du classement actuel
+    if(Object.keys(byVille).length){
+      const currentBox = document.getElementById('ench-current-box');
+      Object.keys(byVille).sort().forEach(ville => {
+        const header = document.createElement('div');
+        header.style.cssText = 'font-weight:700; color:var(--texte); margin:14px 0 6px;';
+        header.textContent = ville;
+        currentBox.appendChild(header);
+        byVille[ville].forEach((e, i) => {
+          const el = document.createElement('div');
+          el.className = 'list-row';
+          el.innerHTML = `
+            <div class="info">
+              <div class="title">${i === 0 ? '🏆 ' : ''}${e.artisanName || '—'} <span class="tag featured">${e.montant} €</span>${i === 0 ? '<span class="tag status-active">Top recommandation</span>' : ''}</div>
+            </div>
+            <div class="row-actions">
+              <button class="btn-sm warn" data-action="retirer">Retirer</button>
+              <button class="btn-sm danger" data-action="supprimer">Supprimer définitivement</button>
+            </div>`;
+          el.querySelector('[data-action="retirer"]').addEventListener('click', async () => {
+            if(!confirm(`Retirer l'enchère active de ${e.artisanName || 'cet artisan'} à ${ville} ? Il redescend dans le classement normal, mais l'historique est conservé.`)) return;
+            await updateDoc(doc(db, "encheres", e.id), { status: 'retiree', reviewedAt: Date.now() });
+            const ref = allEncheres.find(x => x.id === e.id);
+            if(ref) ref.status = 'retiree';
+            renderEncheres();
+          });
+          el.querySelector('[data-action="supprimer"]').addEventListener('click', async () => {
+            if(!confirm(`Supprimer définitivement cette enchère (${e.artisanName || 'artisan'}, ${e.montant} € — ${ville}) ? Action irréversible.`)) return;
+            await deleteDoc(doc(db, "encheres", e.id));
+            allEncheres = allEncheres.filter(x => x.id !== e.id);
+            renderEncheres();
+          });
+          currentBox.appendChild(el);
+        });
+      });
+    }
+  }
+  document.getElementById('encheres-search').addEventListener('input', renderEncheres);
+
+  // ---------- PROFILS (création manuelle) ----------
+  let profilRole = 'client';
+  let profilPhotoDataUrl = null;
+  document.querySelectorAll('#profil-role-tiles .role-tile-admin').forEach(tile => {
+    tile.addEventListener('click', () => {
+      document.querySelectorAll('#profil-role-tiles .role-tile-admin').forEach(t => t.classList.remove('selected'));
+      tile.classList.add('selected');
+      profilRole = tile.dataset.role;
+      document.getElementById('profil-fields-client').classList.toggle('hidden', profilRole !== 'client');
+      document.getElementById('profil-fields-artisan').classList.toggle('hidden', profilRole !== 'artisan');
+    });
+  });
+  document.getElementById('profil-photo').addEventListener('change', async () => {
+    const file = document.getElementById('profil-photo').files[0];
+    if(!file) return;
+    try{
+      profilPhotoDataUrl = await resizeImageToDataUrl(file, 500, 0.75);
+      const prev = document.getElementById('profil-photo-preview');
+      prev.src = profilPhotoDataUrl; prev.classList.remove('hidden');
+    }catch(e){ console.error(e); }
+  });
+
+  document.getElementById('btn-create-profil').addEventListener('click', async () => {
+    const ville = document.getElementById('profil-ville').value.trim();
+    const telephone = document.getElementById('profil-telephone').value.trim();
+    const email = document.getElementById('profil-email').value.trim();
+    const msgBox = document.getElementById('profil-create-msg');
+    if(!ville){ msgBox.textContent = "Merci d'indiquer une ville."; msgBox.style.color = 'var(--rouge)'; return; }
+
+    let extra;
+    if(profilRole === 'client'){
+      const nom = document.getElementById('profil-nom').value.trim();
+      const prenom = document.getElementById('profil-prenom').value.trim();
+      if(!nom || !prenom){ msgBox.textContent = "Merci de remplir nom et prénom."; msgBox.style.color = 'var(--rouge)'; return; }
+      extra = { nom, prenom };
+    } else {
+      const denomination = document.getElementById('profil-denomination').value.trim();
+      if(!denomination){ msgBox.textContent = "Merci d'indiquer la dénomination sociale."; msgBox.style.color = 'var(--rouge)'; return; }
+      const metiers = document.getElementById('profil-metiers').value.split(',').map(s => s.trim()).filter(Boolean);
+      extra = { denominationSociale: denomination, prenom: denomination, nom: '', metiers, villesIntervention: [ville] };
+    }
+
+    const btn = document.getElementById('btn-create-profil');
+    btn.disabled = true; btn.textContent = "Création en cours...";
+    try{
+      const newRef = doc(collection(db, "users"));
+      await setDoc(newRef, {
+        ...extra, ville, telephone: telephone || '', email: email || '',
+        photo: profilPhotoDataUrl || null,
+        role: profilRole, status: 'active',
+        disponible: profilRole === 'artisan' ? true : null,
+        createdByAdmin: true, createdAt: serverTimestamp()
+      });
+      allUsers.push({ uid: newRef.id, ...extra, ville, telephone, email, photo: profilPhotoDataUrl, role: profilRole, status: 'active', createdByAdmin: true });
+      msgBox.style.color = 'var(--vert)';
+      msgBox.textContent = "Profil créé avec succès.";
+      ['profil-nom','profil-prenom','profil-denomination','profil-metiers','profil-ville','profil-telephone','profil-email'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+      profilPhotoDataUrl = null;
+      document.getElementById('profil-photo-preview').classList.add('hidden');
+      renderUsers();
+      renderProfils();
+    }catch(e){
+      console.error(e);
+      msgBox.style.color = 'var(--rouge)';
+      msgBox.textContent = "Erreur : " + (e.message || e.code || "inconnue");
+    }
+    btn.disabled = false; btn.textContent = "Créer le profil";
+  });
+
+  function renderProfils(){
+    const term = document.getElementById('profils-search').value.trim().toLowerCase();
+    const box = document.getElementById('profils-list');
+    const profils = allUsers.filter(u => u.createdByAdmin === true).filter(u => {
+      if(!term) return true;
+      const hay = [u.nom, u.prenom, u.ville].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(term);
+    });
+    if(!profils.length){ box.innerHTML = '<div class="empty">Aucun profil créé depuis la console pour l\'instant.</div>'; return; }
+    box.innerHTML = '';
+    profils.forEach(u => {
+      const el = document.createElement('div');
+      el.className = 'list-row';
+      el.innerHTML = `
+        <div class="info">
+          <div class="title">${u.prenom||''} ${u.nom||''} <span class="tag role-${u.role}">${u.role === 'artisan' ? 'Artisan' : 'Client'}</span></div>
+          <div class="sub">${u.ville || ''}${u.telephone ? ' — ' + u.telephone : ''}</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn-sm danger" data-action="delete">Supprimer</button>
+        </div>`;
+      el.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+        if(!confirm(`Supprimer le profil de ${u.prenom||''} ${u.nom||''} ?`)) return;
+        await deleteDoc(doc(db, "users", u.uid));
+        allUsers = allUsers.filter(x => x.uid !== u.uid);
+        renderUsers();
+        renderProfils();
+      });
+      box.appendChild(el);
+    });
+  }
+  document.getElementById('profils-search').addEventListener('input', renderProfils);
+</script>
+</body>
+</html>

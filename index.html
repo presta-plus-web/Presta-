@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presta+ — Inscription</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --marine: #1F3A5C;
+    --marine-clair: #2E5580;
+    --or: #D9A628;
+    --or-clair: #F2C94C;
+    --fond: #F7F7F5;
+    --carte: #FFFFFF;
+    --texte: #1A1A1A;
+    --texte-doux: #5A6472;
+    --bordure: #E1E4E8;
+    --vert: #2E9E5B;
+    --rouge: #D64545;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--fond);
+    color:var(--texte);
+    font-family:'Inter', sans-serif;
+    font-size:17px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:32px 18px 60px;
+  }
+  header{
+    width:100%;
+    max-width:440px;
+    text-align:center;
+    margin-bottom:24px;
+  }
+  header img{
+    max-width:260px;
+    width:100%;
+    height:auto;
+  }
+  .card{
+    width:100%;
+    max-width:440px;
+    background:var(--carte);
+    border:1px solid var(--bordure);
+    border-radius:14px;
+    padding:28px 24px;
+    box-shadow: 0 2px 12px rgba(31,58,92,0.06);
+  }
+  @media (min-width: 760px){
+    body{ padding-top:64px; }
+    .card{ max-width:460px; padding:34px 32px; }
+    header img{ max-width:300px; }
+  }
+  label{
+    display:block;
+    font-size:15px;
+    font-weight:600;
+    color:var(--marine);
+    margin:18px 0 8px;
+  }
+  label:first-of-type{margin-top:0;}
+  input{
+    width:100%;
+    background:var(--fond);
+    border:1.5px solid var(--bordure);
+    color:var(--texte);
+    padding:14px 16px;
+    border-radius:8px;
+    font-size:17px;
+    font-family:'Inter', sans-serif;
+  }
+  input:focus{
+    outline:none;
+    border-color:var(--marine);
+  }
+  .step{display:none;}
+  .step.active{display:block;}
+  .roles{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:8px;
+  }
+  .role-tile{
+    background:var(--fond);
+    border:2px solid var(--bordure);
+    border-radius:10px;
+    padding:22px 12px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .role-tile.selected{
+    border-color:var(--or);
+    background:#FFF8E6;
+  }
+  .role-tile .icon{font-size:2rem; display:block; margin-bottom:10px;}
+  .role-tile .label{
+    font-family:'Poppins', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--marine);
+  }
+  .role-tile .sub{
+    font-size:13px;
+    color:var(--texte-doux);
+    margin-top:4px;
+  }
+  button.primary{
+    width:100%;
+    background:var(--marine);
+    color:#FFFFFF;
+    border:none;
+    font-family:'Poppins', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    padding:16px;
+    border-radius:10px;
+    margin-top:24px;
+    cursor:pointer;
+  }
+  button.primary:disabled{
+    background:#B9C2CC;
+    cursor:not-allowed;
+  }
+  button.primary:not(:disabled):active{
+    background:var(--marine-clair);
+  }
+  .switch-link{
+    text-align:center;
+    margin-top:20px;
+    font-size:15px;
+    color:var(--texte-doux);
+  }
+  .switch-link a{color:var(--or); font-weight:600; text-decoration:none;}
+  #msg{
+    margin-top:16px;
+    font-size:15px;
+    padding:12px 14px;
+    border-radius:8px;
+    display:none;
+    font-weight:500;
+  }
+  #msg.error{display:block; background:#FCE9E9; color:#B23434; border:1px solid var(--rouge);}
+  #msg.ok{display:block; background:#E7F6EC; color:#1F7A44; border:1px solid var(--vert);}
+  .back-btn{
+    background:none; border:none; color:var(--texte-doux);
+    font-size:15px; font-weight:600;
+    cursor:pointer; padding:0; margin-bottom:18px;
+  }
+  .eye-btn{
+    position:absolute;
+    right:6px;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:6px;
+    line-height:1;
+    color:var(--texte-doux);
+    display:flex;
+    align-items:center;
+  }
+  .tabs{
+    width:100%; max-width:440px; display:flex; gap:10px; margin-bottom:16px;
+  }
+  @media (min-width: 760px){ .tabs{ max-width:460px; } }
+  .tab-btn{
+    flex:1; padding:14px 10px; border-radius:10px; border:2px solid var(--marine);
+    background:#fff; color:var(--marine); font-family:'Poppins', sans-serif;
+    font-weight:700; font-size:15px; cursor:pointer; transition:background .15s, color .15s;
+  }
+  .tab-btn.active{ background:var(--marine); color:#fff; }
+  .btn-google{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    background:#fff; border:1.5px solid var(--bordure); color:var(--texte);
+    font-family:'Inter', sans-serif; font-weight:600; font-size:15px;
+    padding:13px; border-radius:10px; cursor:pointer; margin-top:14px;
+  }
+  .btn-google:active{ background:#F2F2F2; }
+  .btn-google svg{ flex-shrink:0; }
+  .divider{
+    display:flex; align-items:center; gap:12px; margin-top:20px;
+    color:var(--texte-doux); font-size:13px;
+  }
+  .divider::before, .divider::after{ content:''; flex:1; height:1px; background:var(--bordure); }
+  .hidden{ display:none !important; }
+  .remember-row{
+    display:flex; align-items:center; gap:10px; margin-top:16px;
+  }
+  .remember-row input[type="checkbox"]{
+    width:auto; accent-color:var(--marine); cursor:pointer;
+  }
+  .remember-row label{
+    margin:0; font-weight:500; color:var(--texte-doux); font-size:15px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo.png" alt="Presta+">
+</header>
+
+<div class="tabs">
+  <button type="button" class="tab-btn" id="tab-account">Créer un compte</button>
+  <button type="button" class="tab-btn active" id="tab-login">Se connecter</button>
+</div>
+
+<div class="card">
+
+  <!-- ÉTAPE 1 : choix du rôle -->
+  <div class="step" id="step-role">
+    <button type="button" class="btn-google" id="btn-google-signup">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+      Continuer avec Google
+    </button>
+    <div class="divider">ou</div>
+    <label>Vous êtes ?</label>
+    <div class="roles">
+      <div class="role-tile" data-role="artisan">
+        <span class="icon">🔧</span>
+        <div class="label">Artisan</div>
+        <div class="sub">Je propose mes services</div>
+      </div>
+      <div class="role-tile" data-role="client">
+        <span class="icon">🏠</span>
+        <div class="label">Client</div>
+        <div class="sub">Je cherche un artisan</div>
+      </div>
+    </div>
+    <button class="primary" id="btn-role-next" disabled>Continuer</button>
+    <div class="switch-link">Déjà inscrit ? <a href="#" id="go-login">Se connecter</a></div>
+  </div>
+
+  <!-- ÉTAPE 2 : informations de compte (champs différents selon le rôle) -->
+  <div class="step" id="step-account">
+    <button class="back-btn" id="btn-back-to-role">← Retour</button>
+
+    <div id="fields-client">
+      <label for="nom">Nom</label>
+      <input type="text" id="nom" placeholder="Dupont">
+      <label for="prenom">Prénom</label>
+      <input type="text" id="prenom" placeholder="Jean">
+    </div>
+
+    <div id="fields-artisan">
+      <label for="denomination-sociale">Dénomination sociale</label>
+      <input type="text" id="denomination-sociale" placeholder="Dupont Plomberie">
+    </div>
+
+    <label for="email">Adresse e-mail</label>
+    <input type="email" id="email" placeholder="jean.dupont@email.com">
+
+    <label for="password">Mot de passe</label>
+    <div style="position:relative;">
+      <input type="password" id="password" placeholder="8 caractères minimum" style="padding-right:48px;">
+      <button type="button" class="eye-btn" data-target="password" aria-label="Afficher le mot de passe">
+        <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+
+    <label for="password-confirm">Confirmer le mot de passe</label>
+    <div style="position:relative;">
+      <input type="password" id="password-confirm" placeholder="Retapez votre mot de passe" style="padding-right:48px;">
+      <button type="button" class="eye-btn" data-target="password-confirm" aria-label="Afficher le mot de passe">
+        <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+
+    <label for="ville">Ville</label>
+    <input type="text" id="ville" placeholder="Paris">
+
+    <button class="primary" id="btn-submit">Créer mon compte</button>
+  </div>
+
+  <!-- ÉTAPE GOOGLE : complément de profil pour un nouveau compte Google -->
+  <div class="step" id="step-google-complete">
+    <label>Bienvenue ! Encore une étape pour finaliser ton compte.</label>
+    <label>Vous êtes ?</label>
+    <div class="roles" id="g-roles">
+      <div class="role-tile" data-role="artisan">
+        <span class="icon">🔧</span>
+        <div class="label">Artisan</div>
+        <div class="sub">Je propose mes services</div>
+      </div>
+      <div class="role-tile" data-role="client">
+        <span class="icon">🏠</span>
+        <div class="label">Client</div>
+        <div class="sub">Je cherche un artisan</div>
+      </div>
+    </div>
+
+    <div id="g-fields-client" class="hidden">
+      <label for="g-nom">Nom</label>
+      <input type="text" id="g-nom" placeholder="Dupont">
+      <label for="g-prenom">Prénom</label>
+      <input type="text" id="g-prenom" placeholder="Jean">
+    </div>
+
+    <div id="g-fields-artisan" class="hidden">
+      <label for="g-denomination-sociale">Dénomination sociale</label>
+      <input type="text" id="g-denomination-sociale" placeholder="Dupont Plomberie">
+    </div>
+
+    <div id="g-ville-row" class="hidden">
+      <label for="g-ville">Ville</label>
+      <input type="text" id="g-ville" placeholder="Paris">
+    </div>
+
+    <button class="primary" id="btn-google-submit" disabled>Terminer mon inscription</button>
+  </div>
+
+  <!-- CONNEXION -->
+  <div class="step active" id="step-login">
+    <button type="button" class="btn-google" id="btn-google-login">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
+      Continuer avec Google
+    </button>
+    <div class="divider">ou</div>
+
+    <label for="login-email">Adresse e-mail</label>
+    <input type="email" id="login-email" placeholder="jean.dupont@email.com">
+    <label for="login-password">Mot de passe</label>
+    <div style="position:relative;">
+      <input type="password" id="login-password" placeholder="Votre mot de passe" style="padding-right:48px;">
+      <button type="button" class="eye-btn" data-target="login-password" aria-label="Afficher le mot de passe">
+        <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eye-closed" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+    <div class="switch-link" style="margin-top:10px; text-align:right;">
+      <a href="#" id="forgot-password">Mot de passe oublié ?</a>
+    </div>
+    <div class="remember-row">
+      <input type="checkbox" id="remember-me" checked>
+      <label for="remember-me">Se souvenir de moi</label>
+    </div>
+    <button class="primary" id="btn-login">Se connecter</button>
+    <div class="switch-link">Pas encore de compte ? <a href="#" id="go-account">S'inscrire</a></div>
+  </div>
+
+  <div id="msg"></div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail,
+    setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged, GoogleAuthProvider, signInWithPopup,
+    signInWithRedirect, getRedirectResult
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDnqz1ZbSXcUnxRTi4LZCMzdwo8mTdiQBw",
+    authDomain: "travaux-presto.firebaseapp.com",
+    projectId: "travaux-presto",
+    storageBucket: "travaux-presto.firebasestorage.app",
+    messagingSenderId: "256371327938",
+    appId: "1:256371327938:web:a993a9a55b64dbc0334c5b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const googleProvider = new GoogleAuthProvider();
+
+  let selectedRole = null;
+  let googleSelectedRole = null;
+  let googleUid = null;
+  let skipNextAuthRedirect = false;
+
+  const stepAccount = document.getElementById('step-account');
+  const stepRole = document.getElementById('step-role');
+  const stepLogin = document.getElementById('step-login');
+  const stepGoogle = document.getElementById('step-google-complete');
+  const msg = document.getElementById('msg');
+  const tabAccount = document.getElementById('tab-account');
+  const tabLogin = document.getElementById('tab-login');
+
+  function showMsg(text, type){
+    msg.textContent = text;
+    msg.className = type;
+  }
+
+  function showStep(step){
+    [stepAccount, stepRole, stepLogin, stepGoogle].forEach(s => s.classList.remove('active'));
+    step.classList.add('active');
+    msg.className = '';
+    tabAccount.classList.toggle('active', step !== stepLogin);
+    tabLogin.classList.toggle('active', step === stepLogin);
+  }
+
+  tabAccount.addEventListener('click', () => showStep(stepRole));
+  tabLogin.addEventListener('click', () => showStep(stepLogin));
+
+  // Reste connecté : on force la persistance locale, puis on redirige automatiquement
+  // vers l'espace si l'utilisateur est déjà authentifié (il n'a pas à retaper ses identifiants).
+  setPersistence(auth, browserLocalPersistence).then(() => {
+    onAuthStateChanged(auth, async (user) => {
+      if(!user || skipNextAuthRedirect) return;
+      try{
+        const snap = await getDoc(doc(db, "users", user.uid));
+        if(snap.exists()){
+          window.location.href = "espace.html";
+        }
+      }catch(e){ /* pas grave, l'utilisateur reste sur la page de connexion */ }
+    });
+  });
+
+  async function afterGoogleSignIn(user){
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if(snap.exists()){
+      window.location.href = "espace.html";
+      return;
+    }
+    // Nouveau compte Google : on complète le profil (ville + rôle)
+    skipNextAuthRedirect = true;
+    googleUid = user.uid;
+    const parts = (user.displayName || '').split(' ');
+    document.getElementById('g-prenom').value = parts[0] || '';
+    document.getElementById('g-nom').value = parts.slice(1).join(' ') || '';
+    showStep(stepGoogle);
+  }
+
+  async function handleGoogleSignIn(){
+    try{
+      const cred = await signInWithPopup(auth, googleProvider);
+      await afterGoogleSignIn(cred.user);
+    }catch(err){
+      if(err.code === 'auth/popup-closed-by-user') return;
+      if(err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request' || err.code === 'auth/operation-not-supported-in-this-environment'){
+        // Le navigateur bloque la fenêtre pop-up : on bascule sur une redirection classique,
+        // qui ne dépend pas des réglages de blocage de pop-up du navigateur.
+        showMsg("Ouverture de Google en cours...", "ok");
+        try{ await signInWithRedirect(auth, googleProvider); }
+        catch(err2){ showMsg("Connexion Google impossible : " + (err2.message || err2.code), "error"); }
+        return;
+      }
+      showMsg("Connexion Google impossible : " + (err.message || err.code), "error");
+    }
+  }
+
+  // Si on revient d'une redirection Google (cas du bloqueur de pop-up), on termine la connexion ici.
+  getRedirectResult(auth).then((cred) => {
+    if(cred && cred.user) return afterGoogleSignIn(cred.user);
+  }).catch((err) => {
+    if(err && err.code && err.code !== 'auth/popup-closed-by-user'){
+      showMsg("Connexion Google impossible : " + (err.message || err.code), "error");
+    }
+  });
+
+  document.getElementById('btn-google-signup').addEventListener('click', handleGoogleSignIn);
+  document.getElementById('btn-google-login').addEventListener('click', handleGoogleSignIn);
+
+  document.querySelectorAll('#g-roles .role-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      document.querySelectorAll('#g-roles .role-tile').forEach(t => t.classList.remove('selected'));
+      tile.classList.add('selected');
+      googleSelectedRole = tile.dataset.role;
+      document.getElementById('g-fields-client').classList.toggle('hidden', googleSelectedRole !== 'client');
+      document.getElementById('g-fields-artisan').classList.toggle('hidden', googleSelectedRole !== 'artisan');
+      document.getElementById('g-ville-row').classList.remove('hidden');
+      document.getElementById('btn-google-submit').disabled = false;
+    });
+  });
+
+  document.getElementById('btn-google-submit').addEventListener('click', async () => {
+    const ville = document.getElementById('g-ville').value.trim();
+    if(!ville || !googleSelectedRole){
+      showMsg("Merci de remplir tous les champs.", "error");
+      return;
+    }
+    let payload;
+    if(googleSelectedRole === 'client'){
+      const nom = document.getElementById('g-nom').value.trim();
+      const prenom = document.getElementById('g-prenom').value.trim();
+      if(!nom || !prenom){ showMsg("Merci de remplir tous les champs.", "error"); return; }
+      payload = { nom, prenom };
+    } else {
+      const denominationSociale = document.getElementById('g-denomination-sociale').value.trim();
+      if(!denominationSociale){ showMsg("Merci de remplir tous les champs.", "error"); return; }
+      // On garde nom/prenom synchronisés avec la dénomination sociale pour que le reste
+      // de l'application (affichage du nom dans les listes, appels, messages...) fonctionne sans changement.
+      payload = { denominationSociale, prenom: denominationSociale, nom: '' };
+    }
+    const btn = document.getElementById('btn-google-submit');
+    btn.disabled = true;
+    btn.textContent = "Création en cours...";
+    try{
+      await setDoc(doc(db, "users", googleUid), {
+        ...payload, email: auth.currentUser ? auth.currentUser.email : '', ville,
+        role: googleSelectedRole,
+        status: "active",
+        disponible: googleSelectedRole === "artisan" ? true : null,
+        createdAt: serverTimestamp()
+      });
+      showMsg("Compte créé avec succès !", "ok");
+      setTimeout(() => { window.location.href = "espace.html"; }, 800);
+    }catch(err){
+      btn.disabled = false;
+      btn.textContent = "Terminer mon inscription";
+      showMsg("Erreur : " + err.message, "error");
+    }
+  });
+
+  document.querySelectorAll('.eye-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      const open = btn.querySelector('.eye-open');
+      const closed = btn.querySelector('.eye-closed');
+      if(target.type === 'password'){
+        target.type = 'text';
+        open.style.display = 'none';
+        closed.style.display = 'block';
+      } else {
+        target.type = 'password';
+        open.style.display = 'block';
+        closed.style.display = 'none';
+      }
+    });
+  });
+
+  // Étape 1 : choix du rôle, qui détermine les champs affichés à l'étape suivante
+  document.querySelectorAll('#step-role .role-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      document.querySelectorAll('#step-role .role-tile').forEach(t => t.classList.remove('selected'));
+      tile.classList.add('selected');
+      selectedRole = tile.dataset.role;
+      document.getElementById('btn-role-next').disabled = false;
+    });
+  });
+
+  document.getElementById('btn-role-next').addEventListener('click', () => {
+    if(!selectedRole) return;
+    document.getElementById('fields-client').classList.toggle('hidden', selectedRole !== 'client');
+    document.getElementById('fields-artisan').classList.toggle('hidden', selectedRole !== 'artisan');
+    showStep(stepAccount);
+  });
+
+  document.getElementById('btn-back-to-role').addEventListener('click', () => showStep(stepRole));
+
+  document.getElementById('btn-submit').addEventListener('click', async () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const passwordConfirm = document.getElementById('password-confirm').value;
+    const ville = document.getElementById('ville').value.trim();
+
+    let extra;
+    if(selectedRole === 'client'){
+      const nom = document.getElementById('nom').value.trim();
+      const prenom = document.getElementById('prenom').value.trim();
+      if(!nom || !prenom){ showMsg("Merci de remplir tous les champs.", "error"); return; }
+      extra = { nom, prenom };
+    } else {
+      const denominationSociale = document.getElementById('denomination-sociale').value.trim();
+      if(!denominationSociale){ showMsg("Merci de remplir tous les champs.", "error"); return; }
+      // nom/prenom restent synchronisés avec la dénomination sociale pour que le reste de
+      // l'application (listes, appels, messages, avis...) affiche le nom sans modification.
+      extra = { denominationSociale, prenom: denominationSociale, nom: '' };
+    }
+
+    if(!email || !password || !passwordConfirm || !ville){
+      showMsg("Merci de remplir tous les champs.", "error");
+      return;
+    }
+    if(password.length < 8){
+      showMsg("Le mot de passe doit faire au moins 8 caractères.", "error");
+      return;
+    }
+    if(password !== passwordConfirm){
+      showMsg("Les deux mots de passe ne correspondent pas.", "error");
+      return;
+    }
+
+    document.getElementById('btn-submit').disabled = true;
+    document.getElementById('btn-submit').textContent = "Création en cours...";
+
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = cred.user.uid;
+
+      await setDoc(doc(db, "users", uid), {
+        ...extra, email, ville,
+        role: selectedRole,
+        status: "active",
+        disponible: selectedRole === "artisan" ? true : null,
+        createdAt: serverTimestamp()
+      });
+
+      showMsg("Compte créé avec succès !", "ok");
+      setTimeout(() => {
+        window.location.href = "espace.html";
+      }, 1000);
+
+    } catch(err){
+      document.getElementById('btn-submit').disabled = false;
+      document.getElementById('btn-submit').textContent = "Créer mon compte";
+      if(err.code === "auth/email-already-in-use"){
+        showMsg("Cet e-mail est déjà utilisé.", "error");
+      } else if(err.code === "auth/invalid-email"){
+        showMsg("Adresse e-mail invalide.", "error");
+      } else {
+        showMsg("Erreur : " + err.message, "error");
+      }
+    }
+  });
+
+  document.getElementById('go-login').addEventListener('click', (e) => {
+    e.preventDefault();
+    showStep(stepLogin);
+  });
+  document.getElementById('go-account').addEventListener('click', (e) => {
+    e.preventDefault();
+    showStep(stepRole);
+  });
+
+  document.getElementById('forgot-password').addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    if(!email){
+      showMsg("Entre d'abord ton adresse e-mail ci-dessus, puis clique sur le lien.", "error");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showMsg("Un e-mail de réinitialisation a été envoyé à " + email + ".", "ok");
+    } catch(err){
+      if(err.code === "auth/user-not-found"){
+        showMsg("Aucun compte associé à cet e-mail.", "error");
+      } else if(err.code === "auth/invalid-email"){
+        showMsg("Adresse e-mail invalide.", "error");
+      } else {
+        showMsg("Erreur : " + err.message, "error");
+      }
+    }
+  });
+
+  document.getElementById('btn-login').addEventListener('click', async () => {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const rememberMe = document.getElementById('remember-me').checked;
+    if(!email || !password){
+      showMsg("Merci de remplir tous les champs.", "error");
+      return;
+    }
+    try {
+      // Case cochée : session gardée en mémoire (survit à la fermeture du navigateur).
+      // Case décochée : session limitée à cet onglet, effacée à sa fermeture.
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+      await signInWithEmailAndPassword(auth, email, password);
+      showMsg("Connexion réussie !", "ok");
+      setTimeout(() => {
+        window.location.href = "espace.html";
+      }, 800);
+    } catch(err){
+      showMsg("E-mail ou mot de passe incorrect.", "error");
+    }
+  });
+</script>
+
+</body>
+</html>

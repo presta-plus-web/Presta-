@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presta+ — Mon espace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  :root{
+    --marine:#1F3A5C; --marine-clair:#2E5580; --or:#D9A628;
+    --fond:#F7F7F5; --carte:#FFFFFF; --texte:#1A1A1A; --texte-doux:#5A6472;
+    --bordure:#E1E4E8; --vert:#2E9E5B; --rouge:#D64545;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--fond); color:var(--texte); font-family:'Inter',sans-serif; font-size:16px; min-height:100vh; padding:20px 14px 70px;}
+  .wrap{max-width:480px; margin:0 auto;}
+
+  @media (min-width: 760px){
+    body{ padding:32px 24px 70px; }
+    .wrap{ max-width:760px; }
+    .card{ padding:26px 30px; }
+    header{ margin-bottom:22px; }
+    .map-box-outer{ height:min(58vh, 460px); }
+    .roles, .checks{ gap:12px; }
+  }
+  @media (min-width: 1100px){
+    .wrap{ max-width:920px; }
+  }
+
+  header{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;}
+  header img{height:70px; width:auto;}
+  .top-actions{display:flex; gap:8px;}
+  .icon-btn{background:none; border:1.5px solid var(--bordure); color:var(--texte-doux); font-size:13px; font-weight:600; padding:8px 12px; border-radius:8px; cursor:pointer;}
+  .icon-btn.on{border-color:var(--or); color:#8A6B12; background:#FFF8E6;}
+  .bell-btn{position:relative; display:inline-flex; align-items:center; font-size:13px;}
+  .bell-badge{position:absolute; top:-6px; right:-6px; background:var(--rouge); color:#fff; font-size:10px; font-weight:700; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px;}
+  .side-panel{background:#fff; width:78%; max-width:300px; height:100%; padding:22px 18px; box-shadow:-2px 0 12px rgba(0,0,0,0.12);}
+  .side-panel-item{padding:14px 4px; font-size:15px; font-weight:600; color:var(--texte); border-bottom:1px solid var(--bordure); cursor:pointer;}
+  .side-panel-item.danger{color:var(--rouge);}
+  .compose-box{margin-top:10px;}
+  .card{background:var(--carte); border:1px solid var(--bordure); border-radius:14px; padding:20px; box-shadow:0 2px 12px rgba(31,58,92,0.06); margin-bottom:14px;}
+  .welcome-name{font-family:'Poppins',sans-serif; font-size:21px; font-weight:700; color:var(--marine);}
+  .avatar-row{display:flex; align-items:center; gap:14px;}
+  .avatar-wrap{position:relative; width:64px; height:64px; border-radius:50%; flex-shrink:0; cursor:pointer;}
+  .avatar-wrap.square{ width:88px; }
+  .avatar-wrap.square, .avatar-wrap.square .avatar-initials, .avatar-wrap.square .avatar-img{ border-radius:10px; }
+  .avatar-wrap.square .avatar-initials, .avatar-wrap.square .avatar-img{ width:88px; }
+  .avatar-initials{width:64px; height:64px; border-radius:50%; background:var(--marine); color:#fff; font-family:'Poppins',sans-serif; font-weight:700; font-size:22px; display:flex; align-items:center; justify-content:center;}
+  .avatar-img{width:64px; height:64px; border-radius:50%; object-fit:cover; display:block;}
+  .avatar-edit{position:absolute; bottom:-2px; right:-2px; width:22px; height:22px; border-radius:50%; background:var(--or); color:#1A1A1A; font-size:12px; display:flex; align-items:center; justify-content:center; border:2px solid #fff;}
+  .role-badge{display:inline-block; margin-top:8px; background:#FFF8E6; color:#8A6B12; border:1px solid var(--or); font-size:12px; font-weight:600; padding:3px 9px; border-radius:20px;}
+  .cert-badge{display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:#2E7BD6; color:#fff; margin-left:4px; vertical-align:middle;}
+  .cert-badge svg{width:10px; height:10px;}
+  .preview-banner{background:#FFF3D6; border:1px solid var(--or); color:#8A6B12; font-size:13px; font-weight:600; padding:10px 14px; border-radius:8px; margin-bottom:14px; text-align:center;}
+  .dispo-row{display:flex; align-items:center; justify-content:space-between; margin-top:16px; padding-top:16px; border-top:1px solid var(--bordure);}
+  .dispo-label{font-weight:600; font-size:15px;}
+  .dispo-sub{font-size:13px; color:var(--texte-doux); margin-top:2px;}
+  .toggle{width:52px; height:30px; border-radius:20px; background:var(--rouge); position:relative; cursor:pointer; border:none; flex-shrink:0;}
+  .toggle.on{background:var(--vert);}
+  .toggle .dot{position:absolute; top:3px; left:3px; width:24px; height:24px; background:#fff; border-radius:50%; transition:transform .15s;}
+  .toggle.on .dot{transform:translateX(22px);}
+  h2{font-family:'Poppins',sans-serif; font-size:16px; color:var(--marine); margin-bottom:10px;}
+  label{display:block; font-size:13px; font-weight:600; color:var(--marine); margin:12px 0 6px;}
+  label:first-of-type{margin-top:0;}
+  input, select, textarea{width:100%; background:var(--fond); border:1.5px solid var(--bordure); color:var(--texte); padding:11px 13px; border-radius:8px; font-size:15px; font-family:'Inter',sans-serif;}
+  textarea{resize:vertical; min-height:130px;}
+  input:focus, select:focus, textarea:focus{outline:none; border-color:var(--marine);}
+  .checks{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
+  .chip{border:1.5px solid var(--bordure); border-radius:20px; padding:7px 13px; font-size:13px; cursor:pointer; user-select:none;}
+  .chip.on{border-color:var(--or); background:#FFF8E6; color:#8A6B12; font-weight:600;}
+  button.primary{width:100%; background:var(--marine); color:#fff; border:none; font-family:'Poppins',sans-serif; font-weight:700; font-size:15px; padding:13px; border-radius:10px; margin-top:14px; cursor:pointer;}
+  button.primary:disabled{background:#B9C2CC; cursor:not-allowed;}
+  button.primary.saved-flash{background:var(--vert) !important;}
+  button.secondary{width:100%; background:none; color:var(--marine); border:1.5px solid var(--marine); font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; padding:11px; border-radius:10px; margin-top:8px; cursor:pointer;}
+  button.danger-link{width:100%; background:none; color:var(--rouge); border:none; font-size:13px; font-weight:600; padding:8px; margin-top:6px; cursor:pointer;}
+  .item{border:1px solid var(--bordure); border-radius:10px; padding:14px; margin-top:10px;}
+  .item-top{display:flex; justify-content:space-between; align-items:flex-start; gap:8px;}
+  .item-title{font-weight:700; color:var(--marine); font-size:15px;}
+  .item-sub{font-size:13px; color:var(--texte-doux); margin-top:2px;}
+  .status-tag{font-size:11px; font-weight:700; padding:3px 8px; border-radius:20px; white-space:nowrap;}
+  .status-ouverte{background:#E7F6EC; color:#1F7A44;}
+  .status-fermee{background:#F0F1F2; color:var(--texte-doux);}
+  .item-desc{font-size:14px; margin-top:8px; color:var(--texte);}
+  .item-actions{display:flex; gap:8px; margin-top:10px;}
+  .item-actions button{flex:1; font-size:13px; padding:8px; border-radius:8px; border:1.5px solid var(--bordure); background:var(--fond); cursor:pointer; font-weight:600; color:var(--texte);}
+  .dispo-dot{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:6px;}
+  .dispo-dot.vert{background:var(--vert);} .dispo-dot.rouge{background:var(--rouge);}
+  .empty{text-align:center; color:var(--texte-doux); font-size:14px; padding:16px 4px;}
+  #msg{margin:10px 0; font-size:14px; padding:11px 13px; border-radius:8px; display:none; font-weight:500;}
+  #msg.error{display:block; background:#FCE9E9; color:#B23434; border:1px solid var(--rouge);}
+  #msg.ok{display:block; background:#E7F6EC; color:#1F7A44; border:1px solid var(--vert);}
+  .hidden{display:none !important;}
+  .modal-bg{position:fixed; inset:0; background:rgba(16,29,44,0.5); display:flex; align-items:flex-end; justify-content:center; z-index:2000;}
+  .modal{background:#fff; border-radius:16px 16px 0 0; padding:22px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto;}
+  .modal-close{background:none; border:none; color:var(--texte-doux); font-size:14px; font-weight:600; float:right; cursor:pointer;}
+  .photo-zoom-bg{position:fixed; inset:0; background:rgba(10,16,24,0.9); display:flex; align-items:center; justify-content:center; z-index:2500; padding:24px;}
+  .photo-zoom-bg img{max-width:100%; max-height:100%; border-radius:10px; object-fit:contain; display:block;}
+  .photo-zoom-close{position:absolute; top:18px; right:18px; background:rgba(255,255,255,0.15); color:#fff; border:none; width:38px; height:38px; border-radius:50%; font-size:18px; cursor:pointer;}
+  /* champ d'enchère : saisie manuelle libre, sans flèches natives */
+  input.no-spin::-webkit-outer-spin-button, input.no-spin::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  input.no-spin{ -moz-appearance:textfield; }
+
+  .contact-options{display:flex; flex-direction:column; gap:10px; margin-top:10px;}
+  .contact-opt{display:flex; align-items:center; gap:12px; border:1.5px solid var(--bordure); border-radius:10px; padding:13px 14px; cursor:pointer; font-weight:600; font-size:15px; background:#fff;}
+  .contact-opt.diag{border-color:var(--rouge); color:var(--rouge); background:#FCEEEE;}
+  .contact-opt .dot-ic{width:10px; height:10px; border-radius:50%; background:var(--marine); flex-shrink:0;}
+  .contact-opt.diag .dot-ic{background:var(--rouge);}
+
+  .call-screen{position:fixed; inset:0; background:radial-gradient(circle at 50% 25%, #2E5580 0%, #0B1622 70%); z-index:3000; display:flex; flex-direction:column; align-items:center; justify-content:space-between; color:#fff; text-align:center; padding:60px 30px 70px;}
+  .call-top{display:flex; flex-direction:column; align-items:center;}
+  .call-name{font-family:'Poppins',sans-serif; font-size:19px; font-weight:700; margin-top:14px; position:relative; z-index:2; letter-spacing:0.01em;}
+  .call-status{font-size:12px; opacity:0.65; margin-top:5px; position:relative; z-index:2; letter-spacing:0.06em; text-transform:uppercase;}
+  .call-avatar{width:76px; height:76px; border-radius:50%; background:linear-gradient(155deg, rgba(217,166,40,0.35), rgba(46,85,128,0.5)); border:1px solid rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:700; font-family:'Poppins',sans-serif; position:relative; z-index:2; box-shadow:0 8px 30px rgba(0,0,0,0.35); animation:call-pulse 2s ease-out infinite; overflow:hidden;}
+  @keyframes call-pulse{
+    0%{ box-shadow:0 8px 30px rgba(0,0,0,0.35), 0 0 0 0 rgba(255,255,255,0.18); }
+    70%{ box-shadow:0 8px 30px rgba(0,0,0,0.35), 0 0 0 18px rgba(255,255,255,0); }
+    100%{ box-shadow:0 8px 30px rgba(0,0,0,0.35), 0 0 0 0 rgba(255,255,255,0); }
+  }
+
+  .call-actions{display:flex; align-items:flex-start; gap:26px; position:relative; z-index:2;}
+  .call-action{display:flex; flex-direction:column; align-items:center; gap:9px;}
+  .call-btn-label{font-size:10px; letter-spacing:0.09em; text-transform:uppercase; color:rgba(255,255,255,0.5); font-family:'Inter',sans-serif;}
+
+  .call-btn{
+    width:58px; height:58px; border-radius:15px; border:1.5px solid rgba(217,166,40,0.55);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:transform .12s ease, box-shadow .2s ease;
+    background:rgba(11,22,34,0.55); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+    position:relative; overflow:hidden; color:#F2C94C;
+    box-shadow:0 0 0 1px rgba(217,166,40,0.12), 0 0 18px rgba(217,166,40,0.22);
+  }
+  .call-btn::before{
+    content:''; position:absolute; top:0; left:14%; right:14%; height:1px;
+    background:linear-gradient(90deg, transparent, currentColor, transparent);
+    animation: laser-scan 2.2s ease-in-out infinite;
+  }
+  @keyframes laser-scan{ 0%,100%{ opacity:0.25; } 50%{ opacity:1; } }
+  .call-btn:active{ transform:scale(0.90); }
+
+  .call-btn.mute-btn.active, .call-btn.camera-switch.active{
+    color:#FF9C9C; border-color:rgba(255,107,107,0.6);
+    box-shadow:0 0 0 1px rgba(255,107,107,0.2), 0 0 18px rgba(255,90,90,0.4);
+  }
+  .call-btn.hangup{
+    width:66px; height:66px; color:#FF4B4B; border-color:rgba(255,107,107,0.7);
+    background:linear-gradient(155deg, rgba(255,107,107,0.28), rgba(160,35,35,0.4));
+    box-shadow:0 0 0 1px rgba(255,107,107,0.3), 0 0 28px rgba(255,70,70,0.5);
+  }
+  .call-btn.accept{
+    width:66px; height:66px; color:#4CE28C; border-color:rgba(79,216,146,0.7);
+    background:linear-gradient(155deg, rgba(79,216,146,0.28), rgba(30,130,75,0.4));
+    box-shadow:0 0 0 1px rgba(79,216,146,0.3), 0 0 28px rgba(70,220,140,0.5);
+  }
+
+  .call-videos{position:absolute; inset:0;}
+  .call-videos video{width:100%; height:100%; object-fit:cover;}
+  .call-videos .local-video{position:absolute; bottom:190px; right:16px; width:96px; height:132px; border-radius:14px; border:1.5px solid rgba(217,166,40,0.6); object-fit:cover; z-index:1; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,0.4);}
+  .call-videos.swapped #remote-video{position:absolute; bottom:190px; right:16px; width:96px; height:132px; border-radius:14px; border:1.5px solid rgba(217,166,40,0.6); object-fit:cover; z-index:1; box-shadow:0 6px 18px rgba(0,0,0,0.4);}
+  .call-videos.swapped .local-video{position:absolute; inset:0; width:100%; height:100%; border-radius:0; border:none; z-index:0; box-shadow:none;}
+  @media (min-width: 760px){
+    .call-videos{ top:0; bottom:0; left:50%; transform:translateX(-50%); width:min(92vw, 520px); background:#000; }
+    .call-videos #remote-video{ object-fit:contain; }
+  }
+  .noanswer-box{background:#fff; color:var(--texte); border-radius:14px; padding:22px; max-width:340px; text-align:center;}
+  .noanswer-box .row{display:flex; flex-direction:column; gap:10px; margin-top:16px;}
+
+  .map-box-outer{width:100%; height:min(62vh, 520px); border-radius:12px; overflow:hidden; margin-bottom:14px; border:1px solid var(--bordure); position:relative;}
+  .map-box-outer.fullscreen{position:fixed; inset:0; z-index:1500; height:100vh; width:100vw; border-radius:0; margin-bottom:0;}
+  .map-inner{width:100%; height:100%;}
+  .map-expand-btn{position:absolute; top:10px; right:10px; z-index:600; width:38px; height:38px; border-radius:8px; background:#fff; border:1px solid var(--bordure); font-size:16px; cursor:pointer; box-shadow:0 1px 4px rgba(0,0,0,0.15);}
+  .map-box-outer.fullscreen .map-expand-btn{top:16px; right:16px;}
+  .marker-self{width:16px; height:16px; border-radius:50%; background:#2E7BD6; border:3px solid #fff; box-shadow:0 0 0 2px #2E7BD6;}
+  .marker-pin{width:26px; height:26px; display:flex; align-items:center; justify-content:center;}
+  .stars{color:#D9A628; font-size:14px; letter-spacing:1px;}
+  .stars .empty-star{color:#D8DCE0;}
+  .rating-sub{font-size:12px; color:var(--texte-doux); margin-left:4px;}
+  .star-picker{font-size:26px; letter-spacing:4px; color:#D8DCE0; cursor:pointer;}
+  .star-picker span.picked{color:var(--or);}
+  .crop-frame{width:260px; height:260px; border-radius:50%; overflow:hidden; margin:14px auto 0; position:relative; background:#000; touch-action:none; cursor:grab;}
+  .crop-frame img{position:absolute; top:0; left:0; user-select:none; -webkit-user-drag:none;}
+  .locate-row{display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--bordure);}
+  .locate-sub{font-size:12px; color:var(--texte-doux); flex:1;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <img id="logo-img" src="logo.png" alt="Presta+">
+  <div class="top-actions">
+    <button class="icon-btn bell-btn" id="btn-messages" aria-label="Voir mes messages">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <span style="margin-left:5px;">Messages</span>
+      <span class="bell-badge hidden" id="bell-badge">0</span>
+    </button>
+    <button class="icon-btn" id="btn-switch">Voir l'autre côté</button>
+    <button class="icon-btn" id="btn-menu">☰</button>
+  </div>
+</header>
+
+<div id="msg"></div>
+
+<div class="card" id="welcome-card" style="display:none;">
+  <div class="avatar-row">
+    <div class="avatar-wrap" id="avatar-wrap">
+      <div class="avatar-initials" id="avatar-initials">--</div>
+      <img id="avatar-img" class="avatar-img hidden" alt="Photo de profil">
+      <div class="avatar-edit">✎</div>
+    </div>
+    <input type="file" id="avatar-input" accept="image/*" class="hidden">
+    <div>
+      <div class="welcome-name" id="user-name">—</div>
+      <span class="role-badge" id="role-badge">—</span>
+    </div>
+  </div>
+
+  <div class="dispo-row" id="dispo-row" style="display:none;">
+    <div>
+      <div class="dispo-label">Disponibilité</div>
+      <div class="dispo-sub" id="dispo-sub">Visible par les clients</div>
+    </div>
+    <button class="toggle" id="dispo-toggle"><span class="dot"></span></button>
+  </div>
+</div>
+
+<!-- ===== BLOC CLIENT (vue réelle ou aperçu) ===== -->
+<div id="client-view">
+
+  <div class="card" id="client-profile-card">
+    <h2>Mon profil</h2>
+    <label>Adresse e-mail (compte)</label>
+    <input type="text" id="c-email-display" disabled style="background:#EFF1F3; color:var(--texte-doux);">
+    <label>Ville</label>
+    <input type="text" id="c-ville">
+    <label>Adresse (rue, numéro)</label>
+    <textarea id="c-adresse" placeholder="12 rue de la Paix, bâtiment, étage..." style="min-height:56px;"></textarea>
+    <label>Téléphone</label>
+    <input type="text" id="c-telephone" placeholder="06 00 00 00 00">
+    <div class="dispo-row" style="margin-top:14px; padding-top:14px;">
+      <div>
+        <div class="dispo-label" style="font-size:14px;">Masquer mon numéro</div>
+        <div class="dispo-sub">Les artisans ne le verront pas</div>
+      </div>
+      <button class="toggle" id="c-tel-visibility-toggle"><span class="dot"></span></button>
+    </div>
+    <div class="dispo-row" style="margin-top:14px; padding-top:14px;">
+      <div>
+        <div class="dispo-label" style="font-size:14px;">Masquer mon e-mail</div>
+        <div class="dispo-sub">Les artisans ne le verront pas</div>
+      </div>
+      <button class="toggle" id="c-email-visibility-toggle"><span class="dot"></span></button>
+    </div>
+    <div class="dispo-row" style="margin-top:14px; padding-top:14px;">
+      <div>
+        <div class="dispo-label" style="font-size:14px;">Masquer mon adresse</div>
+        <div class="dispo-sub">Seule votre ville sera visible</div>
+      </div>
+      <button class="toggle" id="c-adresse-visibility-toggle"><span class="dot"></span></button>
+    </div>
+    <button class="primary" id="btn-save-client-profile">Enregistrer</button>
+    <div class="locate-row">
+      <div class="locate-sub" id="c-locate-status">Position non renseignée</div>
+      <button class="icon-btn" id="btn-locate-client">Me localiser</button>
+    </div>
+  </div>
+
+  <div class="card" id="client-form-card">
+    <h2>Déposer une annonce</h2>
+    <label>Métier recherché</label>
+    <select id="ad-metier">
+      <option value="Plombier">Plombier</option>
+      <option value="Électricien">Électricien</option>
+      <option value="Maçon">Maçon</option>
+      <option value="Peintre">Peintre</option>
+      <option value="Menuisier">Menuisier</option>
+      <option value="Chauffagiste">Chauffagiste</option>
+      <option value="Autre">Autre</option>
+    </select>
+    <input type="text" id="ad-metier-autre" placeholder="Précisez le métier recherché" class="hidden" style="margin-top:8px;">
+    <label>Description de la demande</label>
+    <textarea id="ad-description" placeholder="Décrivez votre besoin..."></textarea><label>Photo (optionnel)</label><input type="file" id="ad-photo-input" accept="image/*" style="margin-bottom:10px;"><img id="ad-photo-preview" class="hidden" style="max-width:160px; border-radius:10px; display:block; margin-bottom:10px;">
+    <button class="primary" id="btn-post-ad">Publier l'annonce</button>
+  </div>
+
+  <div class="card" id="client-ads-card">
+    <h2>Mes annonces</h2>
+    <div id="my-ads-list"><div class="empty">Chargement...</div></div>
+  </div>
+
+  <div class="card" id="artisans-list-card">
+    <h2>Artisans près de chez vous</h2>
+    <div class="map-box-outer" id="client-map-box">
+      <div id="client-map" class="map-inner"></div>
+      <button class="map-expand-btn" id="btn-expand-client-map">⤢</button>
+    </div>
+    <div id="artisans-list"><div class="empty">Chargement...</div></div>
+  </div>
+</div>
+
+<!-- ===== BLOC ARTISAN (vue réelle ou aperçu) ===== -->
+<div id="artisan-view">
+
+  <div class="card" id="artisan-profile-card">
+    <h2>Mon profil</h2>
+    <label>Adresse e-mail (compte)</label>
+    <input type="text" id="a-email-display" disabled style="background:#EFF1F3; color:var(--texte-doux);">
+    <label>Métiers exercés</label>
+    <div class="checks" id="metiers-checks"></div>
+    <div id="autre-metier-row" class="hidden" style="display:flex; gap:8px; margin-top:8px;">
+      <input type="text" id="autre-metier-input" placeholder="Préciser un métier">
+      <button type="button" class="icon-btn" id="btn-add-autre-metier">Ajouter</button>
+    </div>
+    <label>Villes d'intervention</label>
+    <input type="text" id="a-villes" placeholder="Paris, Boulogne, Nanterre">
+    <div class="item-sub" style="margin-top:4px;">Séparez les villes par une virgule</div>
+    <label>Adresse (rue, numéro)</label>
+    <textarea id="a-adresse" placeholder="12 rue de la Paix, bâtiment, étage..." style="min-height:56px;"></textarea>
+    <label>Téléphone</label>
+    <input type="text" id="a-telephone" placeholder="06 00 00 00 00">
+    <label>Jours et horaires d'ouverture</label>
+    <textarea id="a-horaires" placeholder="Lun-Ven : 8h-18h&#10;Sam : 9h-12h" style="min-height:56px;"></textarea>
+    <button class="primary" id="btn-save-artisan-profile">Enregistrer</button>
+    <div class="locate-row">
+      <div class="locate-sub" id="a-locate-status">Position non renseignée</div>
+      <button class="icon-btn" id="btn-locate-artisan">Me localiser</button>
+    </div>
+  </div>
+
+  <div class="card" id="artisan-cert-card">
+    <h2>Certification professionnelle</h2>
+    <div id="cert-status-box"><div class="empty">Chargement...</div></div>
+  </div>
+
+  <div class="card" id="artisan-encheres-card">
+    <h2>Enchères Ville</h2>
+    <div class="item-sub">Un artisan propose un montant pour être mis en avant auprès des clients de sa ville : plus l'offre est élevée, plus il apparaît en haut de la liste, avec la mention "Top recommandation" pour le premier.</div>
+    <button class="secondary" id="btn-open-encheres" style="margin-top:10px;">Voir les offres de ma ville et proposer la mienne</button>
+  </div>
+
+  <div class="card" id="artisan-reviews-card">
+    <h2>Mes avis</h2>
+    <div id="my-reviews-list"><div class="empty">Chargement...</div></div>
+  </div>
+
+  <div class="card" id="artisan-wall-card">
+    <h2>Annonces près de chez vous</h2>
+    <div class="map-box-outer" id="artisan-map-box">
+      <div id="artisan-map" class="map-inner"></div>
+      <button class="map-expand-btn" id="btn-expand-artisan-map">⤢</button>
+    </div>
+    <div id="ads-wall"><div class="empty">Chargement...</div></div>
+  </div>
+</div>
+
+</div>
+
+<div id="modal-root"></div>
+<div id="call-root"></div>
+<div id="side-menu-root"></div>
+
+<audio id="incoming-media"></audio>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getAuth, onAuthStateChanged, signOut, deleteUser, reauthenticateWithCredential, EmailAuthProvider
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
+    collection, addDoc, query, where, getDocs, serverTimestamp, orderBy,
+    onSnapshot
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDnqz1ZbSXcUnxRTi4LZCMzdwo8mTdiQBw",
+    authDomain: "travaux-presto.firebaseapp.com",
+    projectId: "travaux-presto",
+    storageBucket: "travaux-presto.firebasestorage.app",
+    messagingSenderId: "256371327938",
+    appId: "1:256371327938:web:a993a9a55b64dbc0334c5b"
+  };
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const METIERS = ["Plombier","Électricien","Maçon","Peintre","Menuisier","Chauffagiste"];
+  let currentUser = null;
+  let currentData = null;
+  let previewMode = false; let adPhotoDataUrl = null;
+
+  const msg = document.getElementById('msg');
+  function showMsg(text, type){ msg.textContent = text; msg.className = type; setTimeout(()=>{msg.className='';}, 4000); }
+
+  const clientView = document.getElementById('client-view');
+  const artisanView = document.getElementById('artisan-view');
+  const btnSwitch = document.getElementById('btn-switch');
+
+  function renderMetierChips(selected){
+    const box = document.getElementById('metiers-checks');
+    box.innerHTML = '';
+    // métiers de base + métiers personnalisés déjà enregistrés
+    const custom = selected.filter(m => !METIERS.includes(m));
+    [...METIERS, ...custom].forEach(m => {
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (selected.includes(m) ? ' on' : '');
+      chip.textContent = m;
+      chip.dataset.metier = m;
+      chip.addEventListener('click', () => { chip.classList.toggle('on'); });
+      box.appendChild(chip);
+    });
+    const addChip = document.createElement('div');
+    addChip.className = 'chip';
+    addChip.textContent = '+ Autre';
+    addChip.id = 'chip-add-autre';
+    addChip.addEventListener('click', () => {
+      document.getElementById('autre-metier-row').classList.toggle('hidden');
+    });
+    box.appendChild(addChip);
+  }
+
+  function addCustomMetierChip(){
+    const input = document.getElementById('autre-metier-input');
+    const val = input.value.trim();
+    if(!val) return;
+    const box = document.getElementById('metiers-checks');
+    const chip = document.createElement('div');
+    chip.className = 'chip on';
+    chip.textContent = val;
+    chip.dataset.metier = val;
+    chip.addEventListener('click', () => { chip.classList.toggle('on'); });
+    box.insertBefore(chip, document.getElementById('chip-add-autre'));
+    input.value = '';
+    document.getElementById('autre-metier-row').classList.add('hidden');
+  }
+
+  function getSelectedMetiers(){
+    return Array.from(document.querySelectorAll('#metiers-checks .chip.on')).map(c => c.dataset.metier);
+  }
+
+  function applyViewMode(){
+    const isArtisanRole = currentData.role === 'artisan';
+    artisanView.classList.toggle('hidden', !isArtisanRole);
+    clientView.classList.toggle('hidden', isArtisanRole);
+    btnSwitch.classList.toggle('on', previewMode);
+    btnSwitch.textContent = previewMode
+      ? "Revenir à mon espace"
+      : (isArtisanRole ? "Clients proches" : "Artisans proches");
+
+    // mode focus : on cache profil/formulaires, on garde la carte + la liste
+    document.getElementById('client-profile-card').classList.toggle('hidden', previewMode);
+    document.getElementById('client-form-card').classList.toggle('hidden', previewMode);
+    document.getElementById('client-ads-card').classList.toggle('hidden', previewMode);
+    document.getElementById('artisan-profile-card').classList.toggle('hidden', previewMode);
+    document.getElementById('welcome-card').classList.toggle('hidden', previewMode);
+
+    if(isArtisanRole) { loadAdsWall(); loadReviews(currentUser.uid, 'own', 'my-reviews-list'); }
+    else { loadArtisansList(); loadMyAds(); }
+  }
+
+  btnSwitch.addEventListener('click', () => {
+    previewMode = !previewMode;
+    applyViewMode();
+  });
+
+  // ---------- AUTH ----------
+  // Corrige l'affichage d'un ancien compte quand on revient en arrière depuis le cache du navigateur
+  window.addEventListener('pageshow', (e) => {
+    if(e.persisted) window.location.reload();
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if(!user){ window.location.href = "index.html"; return; }
+    currentUser = user;
+    const snap = await getDoc(doc(db, "users", user.uid));
+    if(!snap.exists()){ window.location.href = "index.html"; return; }
+    currentData = snap.data();
+
+    if(currentData.status === 'suspended'){
+      await signOut(auth);
+      document.body.innerHTML = '<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; text-align:center; font-family:Inter,sans-serif;"><div><h2 style="color:#B23434; margin-bottom:10px;">Compte suspendu</h2><p style="color:#5A6472;">Votre compte a été suspendu par l\'administration. Contactez-nous si vous pensez qu\'il s\'agit d\'une erreur.</p></div></div>';
+      return;
+    }
+
+    document.getElementById('user-name').innerHTML = (currentData.prenom||'') + " " + (currentData.nom||'') + (currentData.role === 'artisan' && currentData.certificationStatus === 'certifie' ? certBadgeHtml() : '');
+    document.getElementById('role-badge').textContent = currentData.role === 'artisan' ? "Artisan" : "Client";
+    document.getElementById('welcome-card').style.display = 'block';
+    setupAvatar();
+
+    if(currentData.role === 'artisan'){
+      document.getElementById('a-email-display').value = currentData.email || '';
+      document.getElementById('dispo-row').style.display = 'flex';
+      setupDispoToggle();
+      renderMetierChips(currentData.metiers || []);
+      document.getElementById('a-villes').value = (currentData.villesIntervention || []).join(', ');
+      document.getElementById('a-adresse').value = currentData.adresse || '';
+      document.getElementById('a-telephone').value = currentData.telephone || '';
+      document.getElementById('a-horaires').value = currentData.horaires || '';
+      if(currentData.lat) document.getElementById('a-locate-status').textContent = "Position enregistrée ✓";
+      renderCertificationCard();
+      document.getElementById('btn-open-encheres').addEventListener('click', openEncheresVille);
+    } else {
+      document.getElementById('c-email-display').value = currentData.email || '';
+      document.getElementById('c-ville').value = currentData.ville || '';
+      document.getElementById('c-adresse').value = currentData.adresse || '';
+      document.getElementById('c-telephone').value = currentData.telephone || '';
+      if(currentData.lat) document.getElementById('c-locate-status').textContent = "Position enregistrée ✓";
+      document.getElementById('c-tel-visibility-toggle').classList.toggle('on', currentData.telephoneVisible === false);
+      document.getElementById('c-email-visibility-toggle').classList.toggle('on', currentData.emailVisible === false);
+      document.getElementById('c-adresse-visibility-toggle').classList.toggle('on', currentData.adresseVisible === false);
+    }
+
+    applyViewMode();
+    listenIncomingCalls();
+    listenUnreadMessages();
+    openAdFromLinkIfPresent();
+  });
+
+  // ---------- OUVERTURE AUTO DEPUIS LE LIEN DU MAIL ----------
+  async function openAdFromLinkIfPresent(){
+    if(currentData.role !== 'artisan') return;
+    const adId = new URLSearchParams(window.location.search).get('ad');
+    if(!adId) return;
+    try {
+      const adSnap = await getDoc(doc(db, "ads", adId));
+      if(!adSnap.exists()) return;
+      const ad = adSnap.data();
+      openContactOptions(ad.clientId, ad.prenom + ' ' + ad.nom, ad.email, ad.photo || null);
+    } catch(e){ /* lien invalide ou annonce supprimée, on ignore */ }
+  }
+
+  // ---------- MENU LATÉRAL (☰) ----------
+  document.getElementById('btn-menu').addEventListener('click', openSideMenu);
+
+  function openSideMenu(){
+    const root = document.getElementById('side-menu-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="menu-bg" style="justify-content:flex-end; align-items:stretch;">
+        <div class="side-panel">
+          <button class="modal-close" id="menu-close">Fermer</button>
+          <div class="side-panel-item" id="menu-logout">Déconnexion</div>
+          <div class="side-panel-item" id="menu-contact">Contact</div>
+          <div class="side-panel-item danger" id="menu-close-account">Clôturer mon compte</div>
+        </div>
+      </div>`;
+    document.getElementById('menu-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('menu-bg').addEventListener('click', (e) => { if(e.target.id === 'menu-bg') root.innerHTML = ''; });
+    document.getElementById('menu-logout').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = "index.html";
+    });
+    document.getElementById('menu-contact').addEventListener('click', () => {
+      root.innerHTML = '';
+      openContactAdminOptions();
+    });
+    document.getElementById('menu-close-account').addEventListener('click', closeAccount);
+  }
+
+  async function deleteMyAdsAndProfile(){
+    // annonces déposées (côté client)
+    if(currentData.role === 'client'){
+      const qAds = query(collection(db, "ads"), where("clientId", "==", currentUser.uid));
+      const adsSnaps = await getDocs(qAds);
+      for(const s of adsSnaps.docs){ await deleteDoc(doc(db, "ads", s.id)); }
+    }
+
+    // avis laissés par ce compte, et avis reçus par ce compte (si artisan)
+    const qReviewsWritten = query(collection(db, "reviews"), where("clientId", "==", currentUser.uid));
+    const reviewsWrittenSnaps = await getDocs(qReviewsWritten);
+    const affectedArtisans = new Set();
+    for(const s of reviewsWrittenSnaps.docs){
+      affectedArtisans.add(s.data().artisanId);
+      await deleteDoc(doc(db, "reviews", s.id));
+    }
+    for(const artisanId of affectedArtisans){ await recomputeArtisanRating(artisanId); }
+
+    if(currentData.role === 'artisan'){
+      const qReviewsReceived = query(collection(db, "reviews"), where("artisanId", "==", currentUser.uid));
+      const reviewsReceivedSnaps = await getDocs(qReviewsReceived);
+      for(const s of reviewsReceivedSnaps.docs){ await deleteDoc(doc(db, "reviews", s.id)); }
+    }
+
+    // messages envoyés et reçus
+    const qMsgFrom = query(collection(db, "messages"), where("fromId", "==", currentUser.uid));
+    const msgFromSnaps = await getDocs(qMsgFrom);
+    for(const s of msgFromSnaps.docs){ await deleteDoc(doc(db, "messages", s.id)); }
+
+    const qMsgTo = query(collection(db, "messages"), where("toId", "==", currentUser.uid));
+    const msgToSnaps = await getDocs(qMsgTo);
+    for(const s of msgToSnaps.docs){ await deleteDoc(doc(db, "messages", s.id)); }
+
+    // fiche profil
+    await deleteDoc(doc(db, "users", currentUser.uid));
+
+    // photo stockée localement sur cet appareil
+    try { localStorage.removeItem('tp_photo_' + currentUser.uid); } catch(e){}
+  }
+
+  async function closeAccount(){
+    if(!confirm("Clôturer définitivement votre compte ? Cette action est irréversible.")) return;
+    try {
+      await deleteMyAdsAndProfile();
+      await deleteUser(currentUser);
+      window.location.href = "index.html";
+    } catch(err){
+      if(err.code === 'auth/requires-recent-login'){
+        // les données sont déjà supprimées ; il ne reste qu'à confirmer le mot de passe pour finir
+        const pwd = prompt("Pour finaliser la clôture, entrez votre mot de passe :");
+        if(!pwd){ showMsg("Clôture annulée — vos données ont déjà été supprimées, reconnectez-vous pour réessayer.", "error"); return; }
+        try {
+          const cred = EmailAuthProvider.credential(currentUser.email, pwd);
+          await reauthenticateWithCredential(currentUser, cred);
+          await deleteUser(currentUser);
+          window.location.href = "index.html";
+        } catch(err2){
+          showMsg("Mot de passe incorrect ou erreur : vos données sont supprimées, reconnectez-vous puis réessayez pour finir.", "error");
+        }
+      } else {
+        showMsg("Erreur lors de la clôture : " + (err.message || err.code || "inconnue"), "error");
+      }
+    }
+  }
+
+  // ---------- PHOTO DE PROFIL (localStorage, propre à chaque appareil) ----------
+  function setupAvatar(){
+    const initialsBox = document.getElementById('avatar-initials');
+    const img = document.getElementById('avatar-img');
+    const initials = ((currentData.prenom||'')[0]||'') + ((currentData.nom||'')[0]||'');
+    initialsBox.textContent = initials.toUpperCase() || '--';
+    document.getElementById('avatar-wrap').classList.toggle('square', currentData.role === 'artisan');
+
+    const key = 'tp_photo_' + currentUser.uid;
+    const saved = localStorage.getItem(key) || currentData.photo;
+    if(saved){
+      img.src = saved;
+      img.classList.remove('hidden');
+      initialsBox.classList.add('hidden');
+      if(!localStorage.getItem(key) && currentData.photo){
+        try { localStorage.setItem(key, currentData.photo); } catch(e){}
+      }
+    }
+
+    const wrap = document.getElementById('avatar-wrap');
+    const input = document.getElementById('avatar-input');
+    wrap.addEventListener('click', () => { if(!previewMode) input.click(); });
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = () => openCropModal(reader.result, key, img, initialsBox);
+      reader.readAsDataURL(file);
+      input.value = '';
+    });
+  }
+
+  function openCropModal(srcDataUrl, storageKey, img, initialsBox){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="crop-bg">
+        <div class="modal">
+          <button class="modal-close" id="crop-close">Annuler</button>
+          <h2 style="font-size:17px; margin-top:6px;">Ajuster la photo</h2>
+          <div class="crop-frame" id="crop-frame">
+            <img id="crop-img" src="${srcDataUrl}" draggable="false">
+          </div>
+          <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" style="width:100%; margin-top:14px;">
+          <button class="primary" id="crop-confirm">Valider la photo</button>
+        </div>
+      </div>`;
+
+    const frame = document.getElementById('crop-frame');
+    const cropImg = document.getElementById('crop-img');
+    const zoomSlider = document.getElementById('crop-zoom');
+    const FRAME = 260;
+    let scale = 1, offX = 0, offY = 0, baseScale = 1;
+    let natW = 0, natH = 0;
+
+    cropImg.onload = () => {
+      natW = cropImg.naturalWidth; natH = cropImg.naturalHeight;
+      baseScale = Math.max(FRAME/natW, FRAME/natH);
+      offX = (FRAME - natW*baseScale) / 2;
+      offY = (FRAME - natH*baseScale) / 2;
+      applyTransform();
+    };
+
+    function applyTransform(){
+      const s = baseScale * scale;
+      cropImg.style.width = (natW*s)+'px';
+      cropImg.style.height = (natH*s)+'px';
+      cropImg.style.transform = `translate(${offX}px, ${offY}px)`;
+    }
+
+    zoomSlider.addEventListener('input', () => { scale = parseFloat(zoomSlider.value); clampOffset(); applyTransform(); });
+
+    function clampOffset(){
+      const s = baseScale * scale;
+      const w = natW*s, h = natH*s;
+      offX = Math.min(0, Math.max(FRAME - w, offX));
+      offY = Math.min(0, Math.max(FRAME - h, offY));
+    }
+
+    let dragging = false, startX = 0, startY = 0;
+    function pointerDown(x,y){ dragging = true; startX = x - offX; startY = y - offY; }
+    function pointerMove(x,y){ if(!dragging) return; offX = x - startX; offY = y - startY; clampOffset(); applyTransform(); }
+    function pointerUp(){ dragging = false; }
+
+    frame.addEventListener('mousedown', (e) => pointerDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => pointerMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', pointerUp);
+    frame.addEventListener('touchstart', (e) => { const t=e.touches[0]; pointerDown(t.clientX, t.clientY); }, {passive:true});
+    frame.addEventListener('touchmove', (e) => { const t=e.touches[0]; pointerMove(t.clientX, t.clientY); }, {passive:true});
+    frame.addEventListener('touchend', pointerUp);
+
+    document.getElementById('crop-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('crop-bg').addEventListener('click', (e) => { if(e.target.id === 'crop-bg') root.innerHTML = ''; });
+
+    document.getElementById('crop-confirm').addEventListener('click', async () => {
+      const s = baseScale * scale;
+      const outSize = 300;
+      const canvas = document.createElement('canvas');
+      canvas.width = outSize; canvas.height = outSize;
+      const ctx = canvas.getContext('2d');
+      const factor = outSize / FRAME;
+      const drawW = natW*s*factor, drawH = natH*s*factor;
+      const drawX = offX*factor;
+      const drawY = offY*factor;
+      ctx.drawImage(cropImg, drawX, drawY, drawW, drawH);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      try {
+        localStorage.setItem(storageKey, dataUrl);
+        img.src = dataUrl;
+        img.classList.remove('hidden');
+        initialsBox.classList.add('hidden');
+        await updateDoc(doc(db, "users", currentUser.uid), { photo: dataUrl });
+        currentData.photo = dataUrl;
+      } catch(e){
+        showMsg("Photo trop lourde pour être enregistrée sur cet appareil.", "error");
+      }
+      root.innerHTML = '';
+    });
+  }
+
+
+  function setupDispoToggle(){
+    const toggle = document.getElementById('dispo-toggle');
+    const sub = document.getElementById('dispo-sub');
+    let dispo = currentData.disponible === true;
+    function ui(){ toggle.classList.toggle('on', dispo); sub.textContent = dispo ? "Visible par les clients" : "Masqué des recherches"; }
+    ui();
+    toggle.addEventListener('click', async () => {
+      if(previewMode) return;
+      dispo = !dispo; ui();
+      currentData.disponible = dispo;
+      await updateDoc(doc(db, "users", currentUser.uid), { disponible: dispo });
+    });
+  }
+
+  // ---------- CONFIRMATION VISUELLE SUR BOUTON (comme Pro+) ----------
+  function flashSaved(btn){
+    const original = btn.textContent;
+    btn.classList.add('saved-flash');
+    btn.textContent = 'Enregistré ✓';
+    setTimeout(() => { btn.classList.remove('saved-flash'); btn.textContent = original; }, 2000);
+  }
+
+  // ---------- PROFIL ARTISAN ----------
+  document.getElementById('btn-save-artisan-profile').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const metiers = getSelectedMetiers();
+    const villes = document.getElementById('a-villes').value.split(',').map(v=>v.trim()).filter(Boolean);
+    const adresse = document.getElementById('a-adresse').value.trim();
+    const telephone = document.getElementById('a-telephone').value.trim();
+    const horaires = document.getElementById('a-horaires').value.trim();
+    if(metiers.length === 0 || villes.length === 0){
+      showMsg("Choisissez au moins un métier et une ville.", "error"); return;
+    }
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid), { metiers, villesIntervention: villes, adresse, telephone, horaires });
+      currentData.metiers = metiers; currentData.villesIntervention = villes; currentData.adresse = adresse; currentData.telephone = telephone; currentData.horaires = horaires;
+      flashSaved(btn);
+    } catch(err){
+      showMsg("Échec de l'enregistrement : " + (err.message || err.code || "erreur inconnue") + ". Votre compte est peut-être corrompu — déconnectez-vous et reconnectez-vous.", "error");
+    }
+  });
+
+  // ---------- PROFIL CLIENT ----------
+  document.getElementById('btn-save-client-profile').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const ville = document.getElementById('c-ville').value.trim();
+    const adresse = document.getElementById('c-adresse').value.trim();
+    const telephone = document.getElementById('c-telephone').value.trim();
+    const telephoneVisible = !document.getElementById('c-tel-visibility-toggle').classList.contains('on');
+    const emailVisible = !document.getElementById('c-email-visibility-toggle').classList.contains('on');
+    const adresseVisible = !document.getElementById('c-adresse-visibility-toggle').classList.contains('on');
+    if(!ville){ showMsg("Indiquez votre ville.", "error"); return; }
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid), { ville, adresse, telephone, telephoneVisible, emailVisible, adresseVisible });
+      currentData.ville = ville; currentData.adresse = adresse; currentData.telephone = telephone; currentData.telephoneVisible = telephoneVisible; currentData.emailVisible = emailVisible; currentData.adresseVisible = adresseVisible;
+      // met aussi à jour les annonces déjà publiées, pas seulement les futures
+      const qMyAds = query(collection(db, "ads"), where("clientId", "==", currentUser.uid));
+      const myAdsSnaps = await getDocs(qMyAds);
+      for(const s of myAdsSnaps.docs){
+        await updateDoc(doc(db, "ads", s.id), { ville, adresse, telephone, telephoneVisible, emailVisible, adresseVisible, photo: currentData.photo || null });
+      }
+      flashSaved(btn);
+    } catch(err){
+      showMsg("Échec de l'enregistrement : " + (err.message || err.code || "erreur inconnue") + ". Votre compte est peut-être corrompu — déconnectez-vous et reconnectez-vous.", "error");
+    }
+  });
+
+  document.getElementById('c-tel-visibility-toggle').addEventListener('click', (e) => {
+    e.currentTarget.classList.toggle('on');
+  });
+  document.getElementById('c-email-visibility-toggle').addEventListener('click', (e) => {
+    e.currentTarget.classList.toggle('on');
+  });
+  document.getElementById('c-adresse-visibility-toggle').addEventListener('click', (e) => {
+    e.currentTarget.classList.toggle('on');
+  });
+
+  document.getElementById('btn-locate-client').addEventListener('click', () => locateMe('c-locate-status'));
+  document.getElementById('btn-locate-artisan').addEventListener('click', () => locateMe('a-locate-status'));
+  document.getElementById('btn-add-autre-metier').addEventListener('click', addCustomMetierChip);
+
+  function formatPhoneInput(el){
+    el.addEventListener('input', () => {
+      const digits = el.value.replace(/\D/g, '').slice(0, 15);
+      el.value = digits.replace(/(\d{2})(?=\d)/g, '$1 ').trim();
+    });
+  }
+  formatPhoneInput(document.getElementById('c-telephone'));
+  formatPhoneInput(document.getElementById('a-telephone'));
+
+  function locateMe(statusId){
+    const statusEl = document.getElementById(statusId);
+    if(!navigator.geolocation){ statusEl.textContent = "Géolocalisation non disponible sur cet appareil."; return; }
+    statusEl.textContent = "Localisation en cours...";
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      await updateDoc(doc(db, "users", currentUser.uid), { lat, lng });
+      currentData.lat = lat; currentData.lng = lng;
+      statusEl.textContent = "Position enregistrée ✓";
+    }, () => {
+      statusEl.textContent = "Autorisation refusée. Activez la localisation dans votre navigateur.";
+    });
+  }
+
+  document.getElementById('ad-metier').addEventListener('change', (e) => {
+    document.getElementById('ad-metier-autre').classList.toggle('hidden', e.target.value !== 'Autre');
+  });
+
+  // ---------- DÉPOSER UNE ANNONCE ----------
+  function resizeImageToDataUrl(file, maxDim, quality){ return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => { const img = new Image(); img.onerror = reject; img.onload = () => { let w = img.naturalWidth, h = img.naturalHeight; if(w > maxDim || h > maxDim){ if(w >= h){ h = Math.round(h * maxDim / w); w = maxDim; } else { w = Math.round(w * maxDim / h); h = maxDim; } } const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h); resolve(canvas.toDataURL('image/jpeg', quality)); }; img.src = reader.result; }; reader.readAsDataURL(file); }); } document.getElementById('ad-photo-input').addEventListener('change', async () => { const file = document.getElementById('ad-photo-input').files[0]; if(!file) return; try{ adPhotoDataUrl = await resizeImageToDataUrl(file, 900, 0.75); const prev = document.getElementById('ad-photo-preview'); prev.src = adPhotoDataUrl; prev.classList.remove('hidden'); }catch(e){ showMsg('Impossible de charger cette photo.', 'error'); } }); document.getElementById('btn-post-ad').addEventListener('click', async () => {
+    let metier = document.getElementById('ad-metier').value;
+    if(metier === 'Autre'){
+      const autre = document.getElementById('ad-metier-autre').value.trim();
+      if(!autre){ showMsg("Précisez le métier recherché.", "error"); return; }
+      metier = autre;
+    }
+    const description = document.getElementById('ad-description').value.trim();
+    if(!description){ showMsg("Décrivez votre demande.", "error"); return; }
+    if(!currentData.ville){ showMsg("Complétez d'abord votre ville dans 'Mon profil'.", "error"); return; }
+
+    // une seule annonce ouverte par métier et par client : on met à jour si elle existe déjà
+    const existingQ = query(collection(db, "ads"),
+      where("clientId", "==", currentUser.uid),
+      where("metier", "==", metier),
+      where("status", "==", "ouverte"));
+    const existingSnaps = await getDocs(existingQ);
+
+    if(!existingSnaps.empty){
+      const existingDoc = existingSnaps.docs[0];
+      await updateDoc(doc(db, "ads", existingDoc.id), {
+        description, ville: currentData.ville, telephone: currentData.telephone || '',
+        telephoneVisible: currentData.telephoneVisible !== false, photo: currentData.photo || null, photoAnnonce: adPhotoDataUrl || existingDoc.data().photoAnnonce || null,
+        adresse: currentData.adresse || '', adresseVisible: currentData.adresseVisible !== false,
+        emailVisible: currentData.emailVisible !== false
+      });
+      showMsg("Vous aviez déjà une annonce " + metier + " — elle a été mise à jour.", "ok");
+      notifyMatchingArtisans(metier, currentData.ville, description, existingDoc.id);
+    } else {
+      const newAdRef = await addDoc(collection(db, "ads"), {
+        clientId: currentUser.uid,
+        nom: currentData.nom, prenom: currentData.prenom,
+        email: currentData.email, telephone: currentData.telephone || '',
+        telephoneVisible: currentData.telephoneVisible !== false,
+        emailVisible: currentData.emailVisible !== false,
+        adresse: currentData.adresse || '', adresseVisible: currentData.adresseVisible !== false,
+        photo: currentData.photo || null,
+        photoAnnonce: adPhotoDataUrl || null, ville: currentData.ville, metier, description,
+        status: "ouverte", createdAt: serverTimestamp()
+      });
+      showMsg("Annonce publiée.", "ok");
+      notifyMatchingArtisans(metier, currentData.ville, description, newAdRef.id);
+    }
+    document.getElementById('ad-description').value = '';
+    document.getElementById('ad-metier-autre').value = '';
+    document.getElementById('ad-metier-autre').classList.add('hidden');
+    document.getElementById('ad-metier').value = 'Plombier'; document.getElementById('ad-photo-input').value = ''; document.getElementById('ad-photo-preview').classList.add('hidden'); adPhotoDataUrl = null;
+    loadMyAds();
+  });
+
+  // ---------- MES ANNONCES (client) ----------
+  async function loadMyAds(){
+    const box = document.getElementById('my-ads-list');
+    box.innerHTML = '<div class="empty">Chargement...</div>';
+    const q = query(collection(db, "ads"), where("clientId", "==", currentUser.uid));
+    const snaps = await getDocs(q);
+    if(snaps.empty){ box.innerHTML = '<div class="empty">Aucune annonce pour l\'instant.</div>'; return; }
+    box.innerHTML = '';
+    snaps.forEach(s => {
+      const d = s.data();
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `
+        <div class="item-top">
+          <div><div class="item-title">${d.metier}</div><div class="item-sub">${d.ville}</div></div>
+          <span class="status-tag status-${d.status}">${d.status === 'ouverte' ? 'Ouverte' : 'Fermée'}</span>
+        </div>
+        <div class="item-desc" data-role="desc">${d.description}</div>${d.photoAnnonce ? '<img data-role="ad-photo" src="' + d.photoAnnonce + '" style="width:100%; max-height:200px; object-fit:cover; border-radius:10px; margin-top:8px; display:block; cursor:zoom-in;">' : ''}
+        <div class="item-actions">
+          <button data-action="edit">Modifier</button>
+          <button data-action="delete">Supprimer</button>
+        </div>`;
+      el.querySelector('[data-action="edit"]').addEventListener('click', () => openEditAdForm(el, s.id, d));
+      el.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+        if(!confirm("Supprimer définitivement cette annonce ?")) return;
+        await deleteDoc(doc(db, "ads", s.id));
+        loadMyAds();
+      });
+      const myAdPhotoEl = el.querySelector('[data-role="ad-photo"]');
+      if(myAdPhotoEl){ myAdPhotoEl.addEventListener('click', () => openPhotoZoom(d.photoAnnonce)); }
+      box.appendChild(el);
+    });
+  }
+
+  function openEditAdForm(el, adId, d){
+    const descBox = el.querySelector('[data-role="desc"]');
+    const actions = el.querySelector('.item-actions');
+    descBox.innerHTML = `
+      <select class="edit-metier" style="margin-bottom:8px;">
+        ${METIERS.map(m => `<option value="${m}" ${m===d.metier?'selected':''}>${m}</option>`).join('')}
+        <option value="__autre__" ${!METIERS.includes(d.metier)?'selected':''}>Autre</option>
+      </select>
+      <input type="text" class="edit-metier-autre ${METIERS.includes(d.metier)?'hidden':''}" value="${METIERS.includes(d.metier)?'':d.metier}" placeholder="Précisez le métier" style="margin-bottom:8px;">
+      <textarea class="edit-desc">${d.description}</textarea>`;
+    const selectEl = descBox.querySelector('.edit-metier');
+    const autreEl = descBox.querySelector('.edit-metier-autre');
+    selectEl.addEventListener('change', () => autreEl.classList.toggle('hidden', selectEl.value !== '__autre__'));
+
+    actions.innerHTML = `<button data-action="save">Enregistrer</button><button data-action="cancel">Annuler</button>`;
+    actions.querySelector('[data-action="cancel"]').addEventListener('click', () => loadMyAds());
+    actions.querySelector('[data-action="save"]').addEventListener('click', async () => {
+      let metier = selectEl.value === '__autre__' ? autreEl.value.trim() : selectEl.value;
+      const description = descBox.querySelector('.edit-desc').value.trim();
+      if(!metier || !description){ showMsg("Complétez le métier et la description.", "error"); return; }
+      await updateDoc(doc(db, "ads", adId), { metier, description });
+      showMsg("Annonce modifiée.", "ok");
+      loadMyAds();
+    });
+  }
+
+  // ---------- GÉOCODAGE (ville -> coordonnées, via OpenStreetMap, gratuit) ----------
+  const geocodeCache = {};
+  async function geocodeAddress(adresse, ville){
+    if(!ville) return null;
+    const q = (adresse ? adresse + ', ' : '') + ville;
+    if(geocodeCache[q]) return geocodeCache[q];
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q + ', France')}`);
+      const data = await res.json();
+      if(data && data[0]){
+        const coords = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        geocodeCache[q] = coords;
+        return coords;
+      }
+    } catch(e){ /* pas grave, on affichera sans pin */ }
+    return null;
+  }
+
+  function renderStars(avg, count){
+    if(!count){ return '<span class="rating-sub">Pas encore d\'avis</span>'; }
+    let out = '<span class="stars">';
+    for(let i=1;i<=5;i++){ out += i <= Math.round(avg) ? '★' : '<span class="empty-star">★</span>'; }
+    out += `</span><span class="rating-sub">(${count})</span>`;
+    return out;
+  }
+
+  let clientMapInstance = null, artisanMapInstance = null;
+  function initMap(containerId, existing){
+    if(existing) { existing.remove(); }
+    const map = L.map(containerId, { zoomControl: true, attributionControl: false }).setView([46.6, 2.4], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+    return map;
+  }
+
+  function selfIcon(){
+    return L.divIcon({ className: '', html: '<div class="marker-self"></div>', iconSize: [16,16] });
+  }
+  function pinIcon(){
+    return L.divIcon({ className: '', html: `<div class="marker-pin"><svg width="26" height="26" viewBox="0 0 24 24" fill="#D64545" stroke="#fff" stroke-width="1"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.4 6.6 11.2 7.3 11.8.4.3 1 .3 1.4 0C13.4 21.2 20 15.4 20 10c0-4.4-3.6-8-8-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg></div>`, iconSize: [26,26], iconAnchor: [13,26] });
+  }
+
+  function setupMapExpand(boxId, btnId, getMap){
+    const box = document.getElementById(boxId);
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('click', () => {
+      box.classList.toggle('fullscreen');
+      btn.textContent = box.classList.contains('fullscreen') ? '✕' : '⤢';
+      setTimeout(() => { const m = getMap(); if(m) m.invalidateSize(); }, 150);
+    });
+  }
+  setupMapExpand('client-map-box', 'btn-expand-client-map', () => clientMapInstance);
+  setupMapExpand('artisan-map-box', 'btn-expand-artisan-map', () => artisanMapInstance);
+
+
+
+  async function loadArtisansList(readOnly){
+    const box = document.getElementById('artisans-list');
+    box.innerHTML = '<div class="empty">Chargement...</div>';
+    const ville = currentData.ville;
+    if(!ville){ box.innerHTML = '<div class="empty">Complétez votre ville pour voir les artisans.</div>'; document.getElementById('client-map').innerHTML=''; return; }
+
+    const q = query(collection(db, "users"), where("role", "==", "artisan"), where("villesIntervention", "array-contains", ville));
+    const snaps = await getDocs(q);
+
+    clientMapInstance = initMap('client-map', clientMapInstance);
+    const bounds = [];
+
+    // point bleu = moi
+    let selfCoords = currentData.lat ? { lat: currentData.lat, lng: currentData.lng } : await geocodeAddress(currentData.adresse, ville);
+    if(selfCoords){
+      L.marker([selfCoords.lat, selfCoords.lng], { icon: selfIcon() }).addTo(clientMapInstance);
+      bounds.push([selfCoords.lat, selfCoords.lng]);
+    }
+
+    // Artisans mis en avant (promotion) : ils passent en tête de liste, avec une rotation
+    // qui change au fil du temps si plusieurs artisans sont mis en avant en même temps.
+    // Les comptes suspendus par l'administration ne doivent jamais apparaître ici.
+    const allDocs = snaps.docs.map(s => ({ id: s.id, data: s.data() })).filter(x => x.data.status !== 'suspended');
+    if(!allDocs.length){ box.innerHTML = '<div class="empty">Aucun artisan trouvé dans votre ville pour l\'instant.</div>'; if(bounds.length) clientMapInstance.setView(bounds[0], 12); return; }
+    box.innerHTML = '';
+
+    // Enchères Ville validées : déterminent le classement "Top recommandations".
+    // On ne garde que l'offre validée la plus récente par artisan (montant courant).
+    let bestByArtisan = {};
+    try{
+      const encheresSnap = await getDocs(query(collection(db, "encheres"), where("ville", "==", ville), where("status", "==", "validee")));
+      encheresSnap.docs.forEach(s => {
+        const e = s.data();
+        const t = e.createdAt && e.createdAt.seconds ? e.createdAt.seconds : 0;
+        const prev = bestByArtisan[e.artisanUid];
+        if(!prev || t > prev.t) bestByArtisan[e.artisanUid] = { montant: e.montant, t };
+      });
+    }catch(e){ console.error("Erreur chargement enchères :", e); }
+
+    allDocs.forEach(x => { const b = bestByArtisan[x.id]; if(b){ x.encherMontant = b.montant; x.encherT = b.t; } });
+
+    const encherisDocs = allDocs.filter(x => x.encherMontant != null)
+      .sort((a, b) => (b.encherMontant - a.encherMontant) || (a.encherT - b.encherT));
+
+    // Le reste de la liste (hors enchères) respecte la position choisie manuellement par
+    // l'administration dans la console (onglet "Mise en avant"), plutôt qu'une rotation automatique.
+    const poolDocs = allDocs.filter(x => x.encherMontant == null);
+    const positioned = poolDocs.filter(x => x.data.featuredPosition != null)
+      .sort((a, b) => (a.data.featuredPosition - b.data.featuredPosition) || ((a.data.featuredAt||0) - (b.data.featuredAt||0)));
+    const unpositioned = poolDocs.filter(x => x.data.featuredPosition == null);
+    const finalPool = new Array(poolDocs.length).fill(null);
+    positioned.forEach(x => {
+      let idx = Math.max(0, x.data.featuredPosition - 1);
+      while(idx < finalPool.length && finalPool[idx] !== null) idx++;
+      if(idx >= finalPool.length) idx = finalPool.length - 1;
+      if(idx >= 0) finalPool[idx] = x;
+    });
+    let ui = 0;
+    for(let i = 0; i < finalPool.length; i++){
+      if(finalPool[i] === null) finalPool[i] = unpositioned[ui++];
+    }
+    const orderedDocs = [...encherisDocs, ...finalPool.filter(Boolean)];
+
+    for(const s of orderedDocs){
+      const d = s.data;
+      d.uid = s.id;
+      const dispo = d.disponible === true;
+      const avg = d.noteMoyenne || 0, count = d.nbAvis || 0;
+
+      const coords = d.lat ? { lat: d.lat, lng: d.lng } : await geocodeAddress(d.adresse, d.ville);
+      let marker = null;
+      if(coords){
+        marker = L.marker([coords.lat, coords.lng], { icon: pinIcon() }).addTo(clientMapInstance);
+        marker.bindPopup(`<b>${d.prenom} ${d.nom}</b><br>${(d.metiers||[]).join(', ')}<br>${d.adresse ? d.adresse+', ' : ''}${d.ville||''}${d.telephone ? `<br><a href="tel:${d.telephone.replace(/\s/g,'')}">${d.telephone}</a>` : ''}`);
+        marker.on('click', () => openArtisanModal(d));
+        bounds.push([coords.lat, coords.lng]);
+      }
+
+      const isTopBid = encherisDocs.length && encherisDocs[0].id === s.id;
+      const isBid = s.encherMontant != null;
+      const boostBadge = isTopBid
+        ? ' <span style="font-size:10px; font-weight:700; color:#9C6B00; background:#FDEFD3; padding:2px 7px; border-radius:6px; text-transform:uppercase; letter-spacing:0.03em;">🏆 Top recommandation</span>'
+        : (isBid || d.featured) ? ' <span style="font-size:10px; font-weight:700; color:#9C6B00; background:#FDEFD3; padding:2px 7px; border-radius:6px; text-transform:uppercase; letter-spacing:0.03em;">Recommandé</span>' : '';
+
+      const el = document.createElement('div');
+      el.className = 'item';
+      if(d.featured || isBid) el.style.cssText = 'border:1.5px solid var(--or); background:#FFFBF0;';
+      el.innerHTML = `
+        <div class="item-top">
+          ${avatarHtml(d.photo, d.prenom+' '+d.nom, 44, true)}
+          <div>
+            <div class="item-title"><span class="dispo-dot ${dispo?'vert':'rouge'}"></span>${d.prenom} ${d.nom}${d.certificationStatus === 'certifie' ? certBadgeHtml() : ''}${boostBadge}</div>
+            <div class="item-sub">${(d.metiers||[]).join(', ')}</div>
+            <div style="margin-top:4px;">${renderStars(avg, count)}</div>
+          </div>
+        </div>
+        <div class="item-actions"><button data-action="see-map">Voir sur la carte</button></div>`;
+      el.querySelector('[data-action="see-map"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if(!marker) { showMsg("Position non disponible pour cet artisan.", "error"); return; }
+        document.getElementById('client-map-box').scrollIntoView({ behavior:'smooth', block:'center' });
+        clientMapInstance.setView(marker.getLatLng(), 15);
+        setTimeout(() => marker.openPopup(), 400);
+      });
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => openArtisanModal(d));
+      box.appendChild(el);
+    }
+
+    if(bounds.length === 1) clientMapInstance.setView(bounds[0], 12);
+    else if(bounds.length > 1) clientMapInstance.fitBounds(bounds, { padding: [24,24] });
+  }
+
+  // Affiche une photo en entier (sans recadrage), au-dessus de la fenêtre en cours.
+  function openPhotoZoom(url){
+    if(!url) return;
+    const el = document.createElement('div');
+    el.className = 'photo-zoom-bg';
+    el.innerHTML = `<button class="photo-zoom-close" id="pz-close">✕</button><img src="${url}" alt="">`;
+    el.addEventListener('click', (e) => { if(e.target === el || e.target.id === 'pz-close') el.remove(); });
+    document.body.appendChild(el);
+  }
+
+  function openArtisanModal(d){
+    const root = document.getElementById('modal-root');
+    const dispo = d.disponible === true;
+    const avg = d.noteMoyenne || 0, count = d.nbAvis || 0;
+    root.innerHTML = `
+      <div class="modal-bg" id="modal-bg">
+        <div class="modal">
+          <button class="modal-close" id="modal-close">Fermer</button>
+          <div style="display:flex; justify-content:center; margin-top:4px;"><div id="modal-avatar-zoom" style="cursor:${d.photo ? 'zoom-in' : 'default'};">${avatarHtml(d.photo, d.prenom+' '+d.nom, 84, true)}</div></div>
+          <h2 style="font-size:19px; margin-top:12px; text-align:center;"><span class="dispo-dot ${dispo?'vert':'rouge'}"></span>${d.prenom} ${d.nom}${d.certificationStatus === 'certifie' ? certBadgeHtml() : ''}</h2>
+          <div style="margin-top:4px; text-align:center;">${renderStars(avg, count)}</div>
+          <div class="item-sub" style="margin-top:6px; text-align:center;">${dispo ? 'Disponible actuellement' : 'Actuellement occupé'}</div>
+          <div style="margin-top:14px;">
+            <div class="item-sub">Métiers</div>
+            <div>${(d.metiers||[]).join(', ') || '—'}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="item-sub">Ville</div>
+            <div>${d.ville || '—'}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="item-sub">Téléphone</div>
+            <div>${d.telephone ? `<a href="tel:${d.telephone.replace(/\s/g,'')}" style="color:var(--marine); font-weight:600; text-decoration:none;">${d.telephone}</a>` : 'Non renseigné'}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="item-sub">E-mail</div>
+            <div>${d.email || '—'}</div>
+          </div>
+          ${d.horaires ? `<div style="margin-top:10px;"><div class="item-sub">Horaires</div><div style="white-space:pre-line;">${d.horaires}</div></div>` : ''}
+          <button class="primary" id="btn-contact" style="margin-top:16px;">Contacter</button>
+
+          <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--bordure);">
+            <h2>Avis</h2>
+            <div id="reviews-list"><div class="empty">Chargement...</div></div>
+            <div style="margin-top:14px;">
+              <label>Laisser un avis</label>
+              <div class="star-picker" id="star-picker">
+                <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+              </div>
+              <textarea id="review-text" placeholder="Votre expérience avec cet artisan..." style="margin-top:8px; min-height:60px;"></textarea>
+              <button class="secondary" id="btn-submit-review">Publier mon avis</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('modal-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('modal-bg').addEventListener('click', (e) => { if(e.target.id === 'modal-bg') root.innerHTML = ''; });
+    document.getElementById('btn-contact').addEventListener('click', () => openContactOptions(d.uid, d.prenom + ' ' + d.nom, d.email, d.photo));
+    if(d.photo){ document.getElementById('modal-avatar-zoom').addEventListener('click', () => openPhotoZoom(d.photo)); }
+
+    let chosenStars = 0;
+    const starEls = document.querySelectorAll('#star-picker span');
+    starEls.forEach(s => {
+      s.addEventListener('click', () => {
+        chosenStars = parseInt(s.dataset.v);
+        starEls.forEach(x => x.classList.toggle('picked', parseInt(x.dataset.v) <= chosenStars));
+      });
+    });
+    document.getElementById('btn-submit-review').addEventListener('click', async () => {
+      if(chosenStars === 0){ showMsg("Choisissez une note en étoiles.", "error"); return; }
+      const commentaire = document.getElementById('review-text').value.trim();
+      await addDoc(collection(db, "reviews"), {
+        artisanId: d.uid, clientId: currentUser.uid,
+        clientNom: currentData.prenom + ' ' + currentData.nom,
+        note: chosenStars, commentaire, createdAt: serverTimestamp()
+      });
+      await recomputeArtisanRating(d.uid);
+      showMsg("Avis publié, merci !", "ok");
+      root.innerHTML = '';
+    });
+    loadReviews(d.uid, 'browse');
+  }
+
+  // Fiche client, ouverte depuis la liste d'annonces côté artisan (au lieu d'un affichage figé en liste).
+  function openClientModal(d){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="client-modal-bg">
+        <div class="modal">
+          <button class="modal-close" id="client-modal-close">Fermer</button>
+          <div style="display:flex; justify-content:center; margin-top:4px;"><div id="client-avatar-zoom" style="cursor:${d.photo ? 'zoom-in' : 'default'};">${avatarHtml(d.photo, d.prenom+' '+d.nom, 84, true)}</div></div>
+          <h2 style="font-size:19px; margin-top:12px; text-align:center;">${d.prenom} ${d.nom}</h2>
+          <div class="item-sub" style="margin-top:4px; text-align:center;">Client</div>
+          <div style="margin-top:14px;">
+            <div class="item-sub">Recherche</div>
+            <div>${d.metier || '—'}${d.description ? ' — ' + d.description : ''}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="item-sub">Ville</div>
+            <div>${d.ville || '—'}</div>
+          </div>
+          ${d.adresseVisible !== false && d.adresse ? `<div style="margin-top:10px;"><div class="item-sub">Adresse</div><div>${d.adresse}</div></div>` : ''}
+          <div style="margin-top:10px;">
+            <div class="item-sub">Téléphone</div>
+            <div>${d.telephoneVisible === false ? 'Numéro masqué' : (d.telephone ? `<a href="tel:${d.telephone.replace(/\s/g,'')}" style="color:var(--marine); font-weight:600; text-decoration:none;">${d.telephone}</a>` : 'Non renseigné')}</div>
+          </div>
+          ${d.emailVisible !== false && d.email ? `<div style="margin-top:10px;"><div class="item-sub">E-mail</div><div>${d.email}</div></div>` : ''}
+          ${d.photoAnnonce ? `<div style="margin-top:14px;"><div class="item-sub" style="margin-bottom:6px;">Photo de l'annonce</div><img id="client-annonce-photo" src="${d.photoAnnonce}" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; cursor:zoom-in; display:block;"></div>` : ''}
+          <button class="primary" id="btn-contact-client" style="margin-top:16px;">Contacter</button>
+        </div>
+      </div>`;
+    document.getElementById('client-modal-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('client-modal-bg').addEventListener('click', (e) => { if(e.target.id === 'client-modal-bg') root.innerHTML = ''; });
+    document.getElementById('btn-contact-client').addEventListener('click', () => openContactOptions(d.clientId, d.prenom + ' ' + d.nom, d.email, d.photo));
+    if(d.photo){ document.getElementById('client-avatar-zoom').addEventListener('click', () => openPhotoZoom(d.photo)); }
+    const annoncePhoto = document.getElementById('client-annonce-photo');
+    if(annoncePhoto){ annoncePhoto.addEventListener('click', () => openPhotoZoom(d.photoAnnonce)); }
+  }
+
+  async function loadReviews(artisanId, mode, targetId){
+    targetId = targetId || 'reviews-list';
+    const box = document.getElementById(targetId);
+    if(!box) return;
+    const q = query(collection(db, "reviews"), where("artisanId", "==", artisanId));
+    const snaps = await getDocs(q);
+    if(snaps.empty){ box.innerHTML = '<div class="empty">Aucun avis pour l\'instant.</div>'; return; }
+    box.innerHTML = '';
+    snaps.forEach(s => {
+      const r = s.data();
+      const isMine = mode === 'browse' && r.clientId === currentUser.uid;
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `<div class="item-title" style="font-size:14px;">${renderStars(r.note, 1).replace('(1)','')} <span style="font-weight:400; color:var(--texte-doux); font-size:13px;">${r.clientNom||''}</span></div>
+        <div class="item-desc" data-role="text">${r.commentaire || ''}</div>
+        ${r.reponseArtisan ? `<div class="item-sub" style="margin-top:6px; padding-left:10px; border-left:2px solid var(--or);">Réponse : ${r.reponseArtisan}</div>` : ''}
+        <div class="item-actions" data-role="actions">
+          ${isMine ? `<button data-action="edit">Modifier</button><button data-action="delete">Supprimer</button>` : ''}
+          ${mode === 'own' ? `<button data-action="reply">${r.reponseArtisan ? 'Modifier ma réponse' : 'Répondre'}</button><button data-action="report">Signaler</button>` : ''}
+        </div>`;
+
+      if(isMine){
+        el.querySelector('[data-action="delete"]').addEventListener('click', async () => {
+          if(!confirm("Supprimer votre avis ?")) return;
+          await deleteDoc(doc(db, "reviews", s.id));
+          await recomputeArtisanRating(artisanId);
+          loadReviews(artisanId, mode, targetId);
+        });
+        el.querySelector('[data-action="edit"]').addEventListener('click', () => {
+          const textBox = el.querySelector('[data-role="text"]');
+          textBox.innerHTML = `<textarea class="edit-review-text" style="min-height:60px;">${r.commentaire||''}</textarea>`;
+          const actions = el.querySelector('[data-role="actions"]');
+          actions.innerHTML = `<button data-action="save">Enregistrer</button><button data-action="cancel">Annuler</button>`;
+          actions.querySelector('[data-action="cancel"]').addEventListener('click', () => loadReviews(artisanId, mode, targetId));
+          actions.querySelector('[data-action="save"]').addEventListener('click', async () => {
+            const newText = textBox.querySelector('textarea').value.trim();
+            await updateDoc(doc(db, "reviews", s.id), { commentaire: newText });
+            loadReviews(artisanId, mode, targetId);
+          });
+        });
+      }
+      if(mode === 'own'){
+        el.querySelector('[data-action="reply"]').addEventListener('click', () => {
+          const actions = el.querySelector('[data-role="actions"]');
+          actions.innerHTML = `<textarea class="reply-text" placeholder="Votre réponse..." style="min-height:50px;">${r.reponseArtisan||''}</textarea>
+            <div style="display:flex; gap:8px; margin-top:8px;"><button data-action="save-reply">Envoyer</button><button data-action="cancel-reply">Annuler</button></div>`;
+          actions.querySelector('[data-action="cancel-reply"]').addEventListener('click', () => loadReviews(artisanId, mode, targetId));
+          actions.querySelector('[data-action="save-reply"]').addEventListener('click', async () => {
+            const reponseArtisan = actions.querySelector('.reply-text').value.trim();
+            await updateDoc(doc(db, "reviews", s.id), { reponseArtisan });
+            loadReviews(artisanId, mode, targetId);
+          });
+        });
+        el.querySelector('[data-action="report"]').addEventListener('click', async () => {
+          await addDoc(collection(db, "reports"), {
+            type: 'avis', reviewId: s.id, artisanId,
+            motif: 'Signalé par l\'artisan concerné',
+            status: 'nouveau', createdAt: serverTimestamp()
+          });
+          window.location.href = "mailto:prestaplus.officiel@gmail.com?subject=Signalement avis Presta+&body=Avis signalé (id: " + s.id + ")";
+          showMsg("Avis signalé à la modération.", "ok");
+        });
+      }
+      box.appendChild(el);
+    });
+  }
+
+  async function recomputeArtisanRating(artisanId){
+    const q = query(collection(db, "reviews"), where("artisanId", "==", artisanId));
+    const snaps = await getDocs(q);
+    let total = 0, count = 0;
+    snaps.forEach(s => { total += s.data().note; count++; });
+    const avg = count ? total / count : 0;
+    await updateDoc(doc(db, "users", artisanId), { noteMoyenne: avg, nbAvis: count });
+  }
+
+  // ---------- CERTIFICATION PROFESSIONNELLE (K-bis + assurance RC décennale) ----------
+  function renderCertificationCard(){
+    const box = document.getElementById('cert-status-box');
+    if(!box) return;
+    const statut = currentData.certificationStatus || 'aucune';
+    if(statut === 'certifie'){
+      box.innerHTML = `<div style="display:flex; align-items:center; gap:8px;">${certBadgeHtml()}<span style="font-weight:600;">Compte certifié</span></div>
+        <div class="item-sub" style="margin-top:6px;">Votre certification a été validée. Elle apparaît désormais à côté de votre nom.</div>`;
+    } else if(statut === 'en_attente'){
+      box.innerHTML = `<div class="item-sub">Votre dossier est en attente de validation par notre équipe. Vous serez informé dès qu'il aura été examiné.</div>`;
+    } else {
+      const refuse = statut === 'refuse';
+      box.innerHTML = `
+        <div class="item-sub">${refuse ? 'Votre précédente demande a été refusée. Vous pouvez soumettre un nouveau dossier.' : 'Faites certifier votre compte pour rassurer vos clients : un dossier K-bis et une attestation d\'assurance RC décennale valides vous permettent d\'obtenir une pastille de validation visible sur votre profil.'}</div>
+        <button class="secondary" id="btn-open-cert" style="margin-top:10px;">Faire certifier mon compte</button>`;
+      document.getElementById('btn-open-cert').addEventListener('click', openCertificationUpload);
+    }
+  }
+
+  let certKbisDataUrl = null, certAssuranceDataUrl = null;
+  function openCertificationUpload(){
+    certKbisDataUrl = null; certAssuranceDataUrl = null;
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="cert-bg">
+        <div class="modal">
+          <button class="modal-close" id="cert-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Certification professionnelle</h2>
+          <div class="item-sub" style="margin-top:6px;">Envoyez une photo lisible de chaque document. Les deux sont obligatoires.</div>
+          <label style="margin-top:14px;">Extrait K-bis</label>
+          <input type="file" id="cert-kbis-input" accept="image/*">
+          <img id="cert-kbis-preview" class="hidden" style="width:100%; max-height:180px; object-fit:contain; border-radius:8px; margin-top:8px; background:#f5f5f5;">
+          <label style="margin-top:14px;">Attestation d'assurance RC décennale</label>
+          <input type="file" id="cert-assurance-input" accept="image/*">
+          <img id="cert-assurance-preview" class="hidden" style="width:100%; max-height:180px; object-fit:contain; border-radius:8px; margin-top:8px; background:#f5f5f5;">
+          <button class="primary" id="btn-submit-cert" style="margin-top:16px;">Envoyer mon dossier</button>
+        </div>
+      </div>`;
+    document.getElementById('cert-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('cert-bg').addEventListener('click', (e) => { if(e.target.id === 'cert-bg') root.innerHTML = ''; });
+
+    document.getElementById('cert-kbis-input').addEventListener('change', async () => {
+      const file = document.getElementById('cert-kbis-input').files[0];
+      if(!file) return;
+      try{
+        certKbisDataUrl = await resizeImageToDataUrl(file, 1300, 0.6);
+        const prev = document.getElementById('cert-kbis-preview');
+        prev.src = certKbisDataUrl; prev.classList.remove('hidden');
+      }catch(e){ showMsg("Impossible de charger cette image.", "error"); }
+    });
+    document.getElementById('cert-assurance-input').addEventListener('change', async () => {
+      const file = document.getElementById('cert-assurance-input').files[0];
+      if(!file) return;
+      try{
+        certAssuranceDataUrl = await resizeImageToDataUrl(file, 1300, 0.6);
+        const prev = document.getElementById('cert-assurance-preview');
+        prev.src = certAssuranceDataUrl; prev.classList.remove('hidden');
+      }catch(e){ showMsg("Impossible de charger cette image.", "error"); }
+    });
+
+    document.getElementById('btn-submit-cert').addEventListener('click', async () => {
+      if(!certKbisDataUrl || !certAssuranceDataUrl){
+        showMsg("Merci d'ajouter les deux documents avant d'envoyer.", "error");
+        return;
+      }
+      const btn = document.getElementById('btn-submit-cert');
+      btn.disabled = true; btn.textContent = "Envoi en cours...";
+      try{
+        const artisanName = (currentData.prenom||'') + ' ' + (currentData.nom||'');
+        await addDoc(collection(db, "certifications"), {
+          artisanId: currentUser.uid, artisanName, artisanEmail: currentData.email || '',
+          kbisImage: certKbisDataUrl, assuranceImage: certAssuranceDataUrl,
+          status: 'en_attente', createdAt: serverTimestamp()
+        });
+        await updateDoc(doc(db, "users", currentUser.uid), { certificationStatus: 'en_attente' });
+        currentData.certificationStatus = 'en_attente';
+        // Notification automatique à l'administrateur (réutilise le modèle EmailJS déjà configuré).
+        // Le champ "email_artisan" est celui utilisé comme destinataire réel dans le modèle EmailJS :
+        // il doit donc contenir l'adresse de l'ADMIN, pas celle de l'artisan qui soumet le dossier.
+        if(window.emailjs){
+          const lienAdmin = window.location.origin + window.location.pathname.replace('espace.html', '') + 'admin.html';
+          emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            email_artisan: "prestaplus.officiel@gmail.com",
+            metier: "NOUVELLE DEMANDE DE CERTIFICATION",
+            ville: currentData.ville || (currentData.villesIntervention||[]).join(', '),
+            description: "Un artisan a déposé un dossier de certification (K-bis + assurance RC décennale). Ouvrez la console admin, onglet Certifications, pour l'examiner.",
+            email_client: currentData.email || '',
+            lien_client: lienAdmin,
+            name: artisanName
+          }).catch((e) => console.error("Erreur notification certification :", e));
+        }
+        showMsg("Dossier envoyé, en attente de validation. Merci !", "ok");
+        root.innerHTML = '';
+        renderCertificationCard();
+      }catch(e){
+        console.error(e);
+        btn.disabled = false; btn.textContent = "Envoyer mon dossier";
+        showMsg("Erreur lors de l'envoi : " + (e.message || e.code || "inconnue"), "error");
+      }
+    });
+  }
+
+  // ---------- ENCHÈRES VILLE (mise en avant payante) ----------
+  let encheresVilleActuelle = null;
+  async function openEncheresVille(){
+    const villes = (currentData.villesIntervention || []).filter(Boolean);
+    if(!villes.length){
+      showMsg("Complétez d'abord vos villes d'intervention dans 'Mon profil'.", "error");
+      return;
+    }
+    encheresVilleActuelle = villes[0];
+    await renderEncheresModal();
+  }
+
+  async function renderEncheresModal(){
+    const villes = (currentData.villesIntervention || []).filter(Boolean);
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="ench-bg">
+        <div class="modal">
+          <button class="modal-close" id="ench-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Enchères Ville</h2>
+          <div class="item-sub">Chaque artisan peut proposer un montant pour apparaître plus haut dans la liste envoyée aux clients de sa ville. Celui qui propose le plus est affiché en premier, marqué "Top recommandation". Le montant reste valable tant que personne ne propose plus que vous.</div>
+          ${villes.length > 1 ? `
+          <label style="margin-top:10px;">Ville</label>
+          <select id="ench-ville-select">${villes.map(v => `<option value="${v}" ${v === encheresVilleActuelle ? 'selected' : ''}>${v}</option>`).join('')}</select>` : ''}
+          <div class="item-sub" style="margin-top:12px;">Offres actuelles à <b>${encheresVilleActuelle}</b> (du plus haut au plus bas, sans les noms) :</div>
+          <div id="ench-list" style="margin-top:8px;"><div class="empty">Chargement...</div></div>
+          <label style="margin-top:16px;">Placer / augmenter mon offre (€)</label>
+          <input type="number" class="no-spin" inputmode="numeric" id="ench-montant-input" min="1" step="1" placeholder="Tapez le montant de votre choix, ex : 25">
+          <div class="item-sub" style="margin-top:6px;">Après envoi, Presta+ vous contactera pour le règlement ; votre position se met à jour dès validation.</div>
+          <button class="primary" id="btn-submit-ench" style="margin-top:14px;">Envoyer mon offre</button>
+          <div id="ench-pending-note" class="item-sub" style="margin-top:10px;"></div>
+        </div>
+      </div>`;
+    document.getElementById('ench-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('ench-bg').addEventListener('click', (e) => { if(e.target.id === 'ench-bg') root.innerHTML = ''; });
+    if(villes.length > 1){
+      document.getElementById('ench-ville-select').addEventListener('change', (e) => {
+        encheresVilleActuelle = e.target.value;
+        renderEncheresModal();
+      });
+    }
+
+    const listBox = document.getElementById('ench-list');
+    const pendingNote = document.getElementById('ench-pending-note');
+    try{
+      const snap = await getDocs(query(collection(db, "encheres"), where("ville", "==", encheresVilleActuelle)));
+      const all = snap.docs.map(s => ({ id: s.id, ...s.data() }));
+      const validees = all.filter(e => e.status === 'validee');
+      // ne garder que l'offre la plus récente validée par artisan
+      const bestByArtisan = {};
+      validees.forEach(e => {
+        const t = e.createdAt && e.createdAt.seconds ? e.createdAt.seconds : 0;
+        const prev = bestByArtisan[e.artisanUid];
+        if(!prev || t > prev.t) bestByArtisan[e.artisanUid] = { montant: e.montant, t };
+      });
+      const montants = Object.values(bestByArtisan).map(x => x.montant).sort((a,b) => b - a);
+      if(!montants.length){
+        listBox.innerHTML = '<div class="empty">Aucune offre pour l\'instant dans cette ville. Soyez le premier !</div>';
+      } else {
+        listBox.innerHTML = montants.map((m, i) => `
+          <div class="item" style="padding:10px 14px; ${bestByArtisan[currentUser.uid] && bestByArtisan[currentUser.uid].montant === m ? 'border:1.5px solid var(--or); background:#FFFBF0;' : ''}">
+            <div class="item-top" style="align-items:center;">
+              <div class="item-title" style="margin:0;">${i === 0 ? '🏆 ' : ''}${m} €</div>
+              ${i === 0 ? '<span style="margin-left:auto; font-size:10px; font-weight:700; color:#9C6B00; background:#FDEFD3; padding:2px 7px; border-radius:6px; text-transform:uppercase;">Top recommandation</span>' : ''}
+            </div>
+          </div>`).join('');
+      }
+
+      const myPending = all.find(e => e.artisanUid === currentUser.uid && e.status === 'en_attente');
+      const myValid = bestByArtisan[currentUser.uid];
+      let note = '';
+      if(myPending) note += `Votre offre de ${myPending.montant} € est en attente de validation par l'administration. `;
+      if(myValid) note += `Votre offre active actuellement : ${myValid.montant} €.`;
+      pendingNote.textContent = note;
+    }catch(e){
+      console.error(e);
+      listBox.innerHTML = '<div class="empty">Impossible de charger les enchères.</div>';
+    }
+
+    document.getElementById('btn-submit-ench').addEventListener('click', async () => {
+      const montant = parseInt(document.getElementById('ench-montant-input').value, 10);
+      if(!montant || montant <= 0){
+        showMsg("Merci d'indiquer un montant valide.", "error");
+        return;
+      }
+      const btn = document.getElementById('btn-submit-ench');
+      btn.disabled = true; btn.textContent = "Envoi en cours...";
+      try{
+        const artisanName = currentData.denominationSociale || ((currentData.prenom||'') + ' ' + (currentData.nom||'')).trim();
+        await addDoc(collection(db, "encheres"), {
+          artisanUid: currentUser.uid, artisanName, ville: encheresVilleActuelle,
+          montant, status: 'en_attente', createdAt: serverTimestamp()
+        });
+        if(window.emailjs){
+          const lienAdmin = window.location.origin + window.location.pathname.replace('espace.html', '') + 'admin.html';
+          emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            email_artisan: "prestaplus.officiel@gmail.com",
+            metier: "NOUVELLE ENCHÈRE VILLE",
+            ville: encheresVilleActuelle,
+            description: `Un artisan propose ${montant} € pour être mis en avant à ${encheresVilleActuelle}. Ouvrez la console admin, onglet Enchères, pour valider après réception du paiement.`,
+            email_client: currentData.email || '',
+            lien_client: lienAdmin,
+            name: artisanName
+          }).catch((e) => console.error("Erreur notification enchère :", e));
+        }
+        showMsg("Offre envoyée, en attente de validation. Merci !", "ok");
+        await renderEncheresModal();
+      }catch(e){
+        console.error(e);
+        btn.disabled = false; btn.textContent = "Envoyer mon offre";
+        showMsg("Erreur lors de l'envoi : " + (e.message || e.code || "inconnue"), "error");
+      }
+    });
+  }
+
+  // ---------- MUR DES ANNONCES (artisan) ----------
+  async function loadAdsWall(readOnly){
+    const box = document.getElementById('ads-wall');
+    box.innerHTML = '<div class="empty">Chargement...</div>';
+    const metiers = currentData.metiers || [];
+    const villes = currentData.villesIntervention || [];
+    if(metiers.length === 0 || villes.length === 0){
+      box.innerHTML = '<div class="empty">Complétez vos métiers et villes dans "Mon profil" pour voir les annonces.</div>';
+      document.getElementById('artisan-map').innerHTML = '';
+      return;
+    }
+    const q = query(
+      collection(db, "ads"),
+      where("status", "==", "ouverte"),
+      where("ville", "in", villes.slice(0,10)),
+      where("metier", "in", metiers.slice(0,10))
+    );
+    const snaps = await getDocs(q);
+
+    artisanMapInstance = initMap('artisan-map', artisanMapInstance);
+    const bounds = [];
+
+    let selfCoords = currentData.lat ? { lat: currentData.lat, lng: currentData.lng } : await geocodeAddress(currentData.adresse, villes[0]);
+    if(selfCoords){
+      L.marker([selfCoords.lat, selfCoords.lng], { icon: selfIcon() }).addTo(artisanMapInstance);
+      bounds.push([selfCoords.lat, selfCoords.lng]);
+    }
+
+    if(snaps.empty){ box.innerHTML = '<div class="empty">Aucune annonce correspondant à votre profil pour l\'instant.</div>'; if(bounds.length) artisanMapInstance.setView(bounds[0], 12); return; }
+    box.innerHTML = '';
+
+    for(const s of snaps.docs){
+      const d = s.data();
+      const coords = d.lat ? { lat: d.lat, lng: d.lng } : await geocodeAddress(d.adresse, d.ville);
+      if(coords){
+        const marker = L.marker([coords.lat, coords.lng], { icon: pinIcon() }).addTo(artisanMapInstance);
+        marker.bindPopup(`<b>${d.prenom} ${d.nom}</b><br>${d.metier}${d.telephoneVisible !== false && d.telephone ? `<br><a href="tel:${d.telephone.replace(/\s/g,'')}">${d.telephone}</a>` : ''}`);
+        bounds.push([coords.lat, coords.lng]);
+      }
+
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.style.cursor = 'pointer';
+      el.innerHTML = `
+        <div class="item-top">
+          ${avatarHtml(d.photo, d.prenom+' '+d.nom, 40)}
+          <div><div class="item-title">${d.metier}</div><div class="item-sub">${d.ville} — ${d.prenom} ${d.nom}</div></div>
+        </div>
+        <div class="item-desc">${d.description}</div>${d.photoAnnonce ? '<img data-role="ad-photo" src="' + d.photoAnnonce + '" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; margin-top:10px; display:block; cursor:zoom-in;">' : ''}
+        <div class="item-sub" style="margin-top:8px;">${d.telephoneVisible === false ? 'Numéro masqué' : (d.telephone ? `<a href="tel:${d.telephone.replace(/\s/g,'')}" style="color:var(--marine); font-weight:600; text-decoration:none;">${d.telephone}</a>` : '')}</div>
+        ${d.emailVisible !== false && d.email ? `<div class="item-sub" style="margin-top:4px;">${d.email}</div>` : ''}
+        ${d.adresseVisible !== false && d.adresse ? `<div class="item-sub" style="margin-top:4px;">${d.adresse}</div>` : ''}
+
+        <div class="item-actions"><button data-action="contact">Contacter</button></div>`;
+      el.querySelector('[data-action="contact"]').addEventListener('click', (e) => { e.stopPropagation(); openContactOptions(d.clientId, d.prenom + ' ' + d.nom, d.email, d.photo); });
+      const adPhotoEl = el.querySelector('[data-role="ad-photo"]');
+      if(adPhotoEl){ adPhotoEl.addEventListener('click', (e) => { e.stopPropagation(); openPhotoZoom(d.photoAnnonce); }); }
+      el.addEventListener('click', () => openClientModal(d));
+      box.appendChild(el);
+    }
+
+    if(bounds.length === 1) artisanMapInstance.setView(bounds[0], 12);
+    else if(bounds.length > 1) artisanMapInstance.fitBounds(bounds, { padding: [24,24] });
+  }
+
+  // ---------- SYSTÈME D'APPEL (Jitsi Meet pour la vidéo/audio + Firestore pour la sonnerie) ----------
+  const RING_DURATION = 38000; // ~10 sonneries
+  async function getIceServers(){
+    return {
+      iceServers: [
+        { urls: "stun:stun.relay.metered.ca:80" },
+        { urls: "turn:global.relay.metered.ca:80", username: "5731e87761c6f72cc9b3a954", credential: "7+rmn+YfXjZ1imGP" },
+        { urls: "turn:global.relay.metered.ca:80?transport=tcp", username: "5731e87761c6f72cc9b3a954", credential: "7+rmn+YfXjZ1imGP" },
+        { urls: "turn:global.relay.metered.ca:443", username: "5731e87761c6f72cc9b3a954", credential: "7+rmn+YfXjZ1imGP" },
+        { urls: "turns:global.relay.metered.ca:443?transport=tcp", username: "5731e87761c6f72cc9b3a954", credential: "7+rmn+YfXjZ1imGP" },
+        { urls: 'stun:stun.l.google.com:19302' }
+      ]
+    };
+  }
+  let peerConnection = null; let localStream = null; let remoteStream = null; let webrtcUnsubs = [];
+  let currentCallDocId = null;
+  let currentCallUnsub = null;
+  let incomingCallsUnsub = null;
+  let ringTimeout = null;
+  let ringAudioCtx = null, ringInterval = null;
+  let localAudioMuted = false, localVideoMuted = false; let currentFacingMode = 'user';
+
+  function startRingtone(){
+    stopRingtone();
+    try { ringAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ return; }
+    if(ringAudioCtx.state === 'suspended') ringAudioCtx.resume().catch(()=>{});
+    function beep(){
+      if(!ringAudioCtx) return;
+      if(ringAudioCtx.state === 'suspended') ringAudioCtx.resume().catch(()=>{});
+      const now = ringAudioCtx.currentTime;
+      [0, 0.22].forEach(delay => {
+        const osc = ringAudioCtx.createOscillator();
+        const gain = ringAudioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 950;
+        gain.gain.setValueAtTime(0.0001, now + delay);
+        gain.gain.exponentialRampToValueAtTime(0.9, now + delay + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.2);
+        osc.connect(gain).connect(ringAudioCtx.destination);
+        osc.start(now + delay);
+        osc.stop(now + delay + 0.22);
+      });
+    }
+    beep();
+    ringInterval = setInterval(beep, 1200);
+  }
+  function stopRingtone(){
+    if(ringInterval){ clearInterval(ringInterval); ringInterval = null; }
+    if(ringAudioCtx){ ringAudioCtx.close().catch(()=>{}); ringAudioCtx = null; }
+  }
+
+  // Signal de raccroché "au mieux" si l'onglet/l'appli est fermée pendant un appel (ferme l'onglet, quitte l'appli)
+  window.addEventListener('pagehide', () => {
+    if(currentCallDocId){ updateDoc(doc(db, "calls", currentCallDocId), { status: "ended" }).catch(()=>{}); }
+  });
+
+  // ---------- NOTIFICATION MAIL AUX ARTISANS (EmailJS) ----------
+  const EMAILJS_PUBLIC_KEY = "yWkoRm-wT-iPdrq4i";
+  const EMAILJS_SERVICE_ID = "service_caezxtc";
+  const EMAILJS_TEMPLATE_ID = "template_dkrmxoq";
+  if(window.emailjs) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+
+  async function notifyMatchingArtisans(metier, ville, description, adId){
+    try {
+      const lienClient = window.location.origin + window.location.pathname.replace('espace.html', '') + 'espace.html?ad=' + adId;
+      // Firestore interdit deux "array-contains" dans la même requête :
+      // on filtre par ville côté serveur, puis par métier côté code
+      const q = query(collection(db, "users"),
+        where("role", "==", "artisan"),
+        where("villesIntervention", "array-contains", ville)
+      );
+      const snaps = await getDocs(q);
+      for(const s of snaps.docs){
+        const artisan = s.data();
+        if(!artisan.email) continue;
+        if(artisan.status === 'suspended') continue;
+        if(!Array.isArray(artisan.metiers) || !artisan.metiers.includes(metier)) continue;
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          email_artisan: artisan.email,
+          metier: metier,
+          ville: ville,
+          description: description,
+          email_client: currentData.email,
+          lien_client: lienClient,
+          name: currentData.prenom + ' ' + currentData.nom
+        }).catch((sendErr) => console.error("Erreur EmailJS :", sendErr));
+      }
+    } catch(e){
+      console.error("Erreur notifyMatchingArtisans :", e);
+    }
+  }
+
+  function openContactOptions(targetUid, targetName, targetEmail, targetPhoto){
+    if(!targetUid) return;
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="contact-bg">
+        <div class="modal">
+          <button class="modal-close" id="contact-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Contacter ${targetName}</h2>
+          <div class="contact-options">
+            <div class="contact-opt" id="opt-message"><span class="dot-ic"></span> Message</div>
+            <div class="contact-opt" id="opt-call"><span class="dot-ic"></span> Appel</div>
+            <div class="contact-opt diag" id="opt-video"><span class="dot-ic"></span> Appel vidéo diagnostic</div>
+            <div class="contact-opt diag" id="opt-report"><span class="dot-ic"></span> Signaler cet utilisateur</div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('contact-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('contact-bg').addEventListener('click', (e) => { if(e.target.id==='contact-bg') root.innerHTML=''; });
+    document.getElementById('opt-message').addEventListener('click', () => {
+      openComposeMessage(targetUid, targetName);
+    });
+    document.getElementById('opt-report').addEventListener('click', () => {
+      const modal = root.querySelector('.modal');
+      modal.innerHTML = `
+        <button class="modal-close" id="report-close">Fermer</button>
+        <h2 style="font-size:18px; margin-top:6px;">Signaler ${targetName}</h2>
+        <div class="item-sub" style="margin-top:6px;">Explique brièvement le problème rencontré. Notre équipe examinera ce signalement.</div>
+        <textarea id="report-text" placeholder="Décris le problème (comportement, arnaque, propos déplacés...)" style="margin-top:10px; min-height:80px;"></textarea>
+        <button class="secondary" id="btn-send-report" style="margin-top:12px;">Envoyer le signalement</button>`;
+      document.getElementById('report-close').addEventListener('click', () => root.innerHTML = '');
+      document.getElementById('btn-send-report').addEventListener('click', async () => {
+        const motif = document.getElementById('report-text').value.trim();
+        if(!motif){ showMsg("Merci de décrire le problème avant d'envoyer.", "error"); return; }
+        await addDoc(collection(db, "reports"), {
+          type: 'utilisateur',
+          reportedUid: targetUid, reportedName: targetName,
+          reporterUid: currentUser.uid, reporterName: (currentData.prenom||'') + ' ' + (currentData.nom||''),
+          motif, status: 'nouveau', createdAt: serverTimestamp()
+        });
+        showMsg("Signalement envoyé à la modération. Merci.", "ok");
+        root.innerHTML = '';
+      });
+    });
+    async function resolvePhoto(){
+      if(targetPhoto !== undefined) return targetPhoto;
+      try {
+        const snap = await getDoc(doc(db, "users", targetUid));
+        return snap.exists() ? (snap.data().photo || null) : null;
+      } catch(e){ return null; }
+    }
+    document.getElementById('opt-call').addEventListener('click', async () => {
+      root.innerHTML='';
+      try { const p = await resolvePhoto(); await startCall(targetUid, targetName, 'audio', p); }
+      catch(e){ showMsg("Erreur au lancement de l'appel : " + (e.message || e.code || "inconnue"), "error"); console.error(e); }
+    });
+    document.getElementById('opt-video').addEventListener('click', async () => {
+      root.innerHTML='';
+      try { const p = await resolvePhoto(); await startCall(targetUid, targetName, 'video', p); }
+      catch(e){ showMsg("Erreur au lancement de l'appel vidéo : " + (e.message || e.code || "inconnue"), "error"); console.error(e); }
+    });
+  }
+
+  function initials(name){ return name.split(' ').map(p=>p[0]||'').join('').toUpperCase().slice(0,2); }
+
+  function certBadgeHtml(){
+    return '<span class="cert-badge" title="Artisan certifié"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+  }
+
+  function avatarHtml(photo, name, size, square){
+    size = size || 44;
+    const radius = square ? Math.round(size*0.16) + 'px' : '50%';
+    const width = square ? Math.round(size*1.4) : size;
+    if(photo){
+      return `<img src="${photo}" style="width:${width}px; height:${size}px; border-radius:${radius}; object-fit:cover; flex-shrink:0;" alt="">`;
+    }
+    return `<div style="width:${width}px; height:${size}px; border-radius:${radius}; background:var(--marine); color:#fff; display:flex; align-items:center; justify-content:center; font-family:'Poppins',sans-serif; font-weight:700; font-size:${Math.round(size*0.38)}px; flex-shrink:0;">${initials(name)}</div>`;
+  }
+
+  function setupMuteControl(){
+    const muteBtn = document.getElementById('btn-mute');
+    if(!muteBtn) return;
+    muteBtn.classList.remove('hidden');
+    muteBtn.addEventListener('click', () => {
+      if(!localStream) return;
+      localAudioMuted = !localAudioMuted;
+      localStream.getAudioTracks().forEach(t => t.enabled = !localAudioMuted);
+      muteBtn.classList.toggle('active', localAudioMuted);
+    });
+  }
+
+  function setupVideoControls(){
+    const switchBtn = document.getElementById('btn-camera-switch');
+    const videosBox = document.getElementById('call-videos');
+    const localVideo = document.getElementById('local-video');
+    if(switchBtn && !switchBtn.dataset.bound){
+      switchBtn.dataset.bound = '1';
+      switchBtn.classList.remove('hidden');
+      let switching = false;
+      switchBtn.addEventListener('click', async () => {
+        console.log('camera-switch clicked, switching=', switching, 'localStream=', !!localStream);
+        if(!localStream || switching) return;
+        switching = true;
+        const nextFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+        const oldVideoTrack = localStream.getVideoTracks()[0];
+        const audioTrack = localStream.getAudioTracks()[0];
+        try{
+          if(oldVideoTrack) oldVideoTrack.stop();
+          const newCamStream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: nextFacingMode } });
+          const newVideoTrack = newCamStream.getVideoTracks()[0];
+          if(!newVideoTrack) throw new Error('Aucune piste vidéo disponible');
+          if(peerConnection){
+            const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+            if(sender) await sender.replaceTrack(newVideoTrack);
+          }
+          const newLocalStream = new MediaStream();
+          if(audioTrack) newLocalStream.addTrack(audioTrack);
+          newLocalStream.addTrack(newVideoTrack);
+          localStream = newLocalStream;
+          currentFacingMode = nextFacingMode;
+          if(localVideo) localVideo.srcObject = localStream;
+        }catch(e){
+          console.error('camera switch error:', e);
+          showMsg("Changement de caméra impossible : " + (e.name || e.message || "erreur inconnue"), "error");
+        }
+        switching = false;
+      });
+    }
+    if(localVideo && videosBox && !videosBox.dataset.bound){
+      videosBox.dataset.bound = '1';
+      localVideo.addEventListener('click', () => videosBox.classList.toggle('swapped'));
+    }
+  }
+
+  // ---------- MESSAGERIE INTERNE ----------
+  function openContactAdminOptions(){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="admin-contact-bg">
+        <div class="modal">
+          <button class="modal-close" id="admin-contact-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Contacter Presta+</h2>
+          <div class="contact-options">
+            <div class="contact-opt" id="opt-admin-mail"><span class="dot-ic"></span> Par e-mail</div>
+            <div class="contact-opt" id="opt-admin-msg"><span class="dot-ic"></span> Messagerie directe</div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('admin-contact-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('admin-contact-bg').addEventListener('click', (e) => { if(e.target.id==='admin-contact-bg') root.innerHTML=''; });
+    document.getElementById('opt-admin-mail').addEventListener('click', () => {
+      root.innerHTML = '';
+      window.location.href = "mailto:prestaplus.officiel@gmail.com?subject=Contact Presta+&body=Bonjour, que souhaitez-vous nous demander ?";
+    });
+    document.getElementById('opt-admin-msg').addEventListener('click', () => {
+      root.innerHTML = '';
+      openComposeMessage('admin', 'l\'équipe Presta+');
+    });
+  }
+
+  function openComposeMessage(targetUid, targetName){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="compose-bg">
+        <div class="modal">
+          <button class="modal-close" id="compose-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Message à ${targetName}</h2>
+          <div class="compose-box">
+            <textarea id="compose-text" placeholder="Votre message..." style="min-height:90px;"></textarea><input type="file" id="compose-photo-input" accept="image/*" style="margin-top:8px;"><img id="compose-photo-preview" class="hidden" style="max-width:160px; border-radius:10px; display:block; margin-top:8px;">
+            <button class="primary" id="compose-send">Envoyer</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('compose-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('compose-bg').addEventListener('click', (e) => { if(e.target.id==='compose-bg') root.innerHTML=''; });
+    let composePhotoDataUrl = null; document.getElementById('compose-photo-input').addEventListener('change', async () => { const file = document.getElementById('compose-photo-input').files[0]; if(!file) return; try{ composePhotoDataUrl = await resizeImageToDataUrl(file, 900, 0.75); const prev = document.getElementById('compose-photo-preview'); prev.src = composePhotoDataUrl; prev.classList.remove('hidden'); }catch(e){ showMsg('Impossible de charger cette photo.', 'error'); } }); document.getElementById('compose-send').addEventListener('click', async () => {
+      const text = document.getElementById('compose-text').value.trim();
+      if(!text) return;
+      await addDoc(collection(db, "messages"), {
+        fromId: currentUser.uid, toId: targetUid,
+        fromName: currentData.prenom + ' ' + currentData.nom, photo: composePhotoDataUrl || null,
+        text, read: false, createdAt: serverTimestamp()
+      });
+      showMsg("Message envoyé.", "ok");
+      root.innerHTML = '';
+    });
+  }
+
+  async function openMyMessages(){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="msg-bg">
+        <div class="modal">
+          <button class="modal-close" id="msg-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Mes messages</h2>
+          <div id="my-messages-list" style="margin-top:10px;"><div class="empty">Chargement...</div></div>
+        </div>
+      </div>`;
+    document.getElementById('msg-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('msg-bg').addEventListener('click', (e) => { if(e.target.id==='msg-bg') root.innerHTML=''; });
+
+    const box = document.getElementById('my-messages-list');
+    const q = query(collection(db, "messages"), where("toId", "==", currentUser.uid));
+    const snaps = await getDocs(q);
+    if(snaps.empty){ box.innerHTML = '<div class="empty">Aucun message pour l\'instant.</div>'; return; }
+    box.innerHTML = '';
+    const unreadIds = [];
+    snaps.forEach(s => {
+      const m = s.data();
+      if(!m.read) unreadIds.push(s.id);
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.innerHTML = `<div class="item-title" style="font-size:14px;">${m.fromName || 'Utilisateur'}${!m.read ? ' <span class="rating-sub" style="color:var(--rouge);">Nouveau</span>' : ''}</div>
+        <div class="item-desc">${m.text}</div>${m.photo ? '<img src="' + m.photo + '" style="max-width:200px; border-radius:10px; margin-top:8px; display:block;">' : ''}
+        <div class="item-actions">
+          <button data-action="reply">Répondre</button><button data-action="delete">Supprimer</button>
+          <button data-action="contact">Contacter</button>
+        </div>`;
+      el.querySelector('[data-action="delete"]').addEventListener('click', async () => { if(!confirm('Supprimer ce message ?')) return; await deleteDoc(doc(db, "messages", s.id)); el.remove(); }); if(m.fromId && m.fromId !== 'admin'){
+        el.querySelector('[data-action="reply"]').addEventListener('click', () => {
+          root.innerHTML = '';
+          openComposeMessage(m.fromId, m.fromName || 'cet utilisateur');
+        });
+        el.querySelector('[data-action="contact"]').addEventListener('click', () => {
+          root.innerHTML = '';
+          openContactOptions(m.fromId, m.fromName || 'cet utilisateur', '');
+        });
+      } else {
+        el.querySelector('[data-action="reply"]').disabled = true;
+        el.querySelector('[data-action="contact"]').disabled = true;
+      }
+      box.appendChild(el);
+    });
+    for(const id of unreadIds){ await updateDoc(doc(db, "messages", id), { read: true }); }
+    updateBellBadge();
+  }
+
+  let bellUnsub = null;
+  function listenUnreadMessages(){
+    const q = query(collection(db, "messages"), where("toId", "==", currentUser.uid), where("read", "==", false));
+    bellUnsub = onSnapshot(q, (snap) => {
+      const badge = document.getElementById('bell-badge');
+      const count = snap.size;
+      badge.textContent = count > 9 ? '9+' : String(count);
+      badge.classList.toggle('hidden', count === 0);
+    });
+  }
+  function updateBellBadge(){ /* mise à jour automatique via onSnapshot */ }
+
+  document.getElementById('btn-messages').addEventListener('click', openMyMessages);
+
+  function callScreenHtml(name, photo, statusText){
+    return `
+      <div class="call-screen" id="call-screen">
+        <div class="call-videos hidden" id="call-videos">
+          <video id="remote-video" autoplay playsinline></video>
+          <video id="local-video" class="local-video" autoplay playsinline muted></video>
+        </div>
+        <div class="call-top">
+          <div class="call-avatar">${photo ? `<img src="${photo}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : initials(name)}</div>
+          <div class="call-name">${name}</div>
+          <div class="call-status" id="call-status">${statusText}</div>
+        </div>
+        <div class="call-actions">
+          <div class="call-action">
+            <button class="call-btn mute-btn hidden" id="btn-mute">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </button>
+            <span class="call-btn-label">Muet</span>
+          </div>
+          <div class="call-action">
+            <button class="call-btn camera-switch hidden" id="btn-camera-switch">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+            </button>
+            <span class="call-btn-label">Caméra</span>
+          </div>
+          <div class="call-action">
+            <button class="call-btn hangup" id="btn-hangup">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+            </button>
+            <span class="call-btn-label">Raccrocher</span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  async function startCall(targetUid, targetName, type, targetPhoto){
+    if(currentCallDocId){ showMsg("Vous êtes déjà en communication.", "error"); return; }
+    const callRoot = document.getElementById('call-root');
+    const roomName = 'PrestaPlus-' + currentUser.uid.slice(0,6) + '-' + targetUid.slice(0,6) + '-' + Date.now().toString(36);
+
+    callRoot.innerHTML = callScreenHtml(targetName, targetPhoto, type === 'video' ? "Appel vidéo en cours..." : "Appel en cours...");
+    document.getElementById('btn-hangup').addEventListener('click', () => endCall());
+    startRingtone();
+
+    const callRef = doc(collection(db, "calls"));
+    currentCallDocId = callRef.id;
+    await setDoc(callRef, {
+      callerId: currentUser.uid, calleeId: targetUid,
+      callerName: currentData.prenom + ' ' + currentData.nom,
+      callerPhoto: currentData.photo || null,
+      type, roomName, status: "ringing", createdAt: serverTimestamp()
+    });
+
+    currentCallUnsub = onSnapshot(callRef, (snap) => {
+      const d = snap.data();
+      if(!d) return;
+      if(d.status === 'accepted'){
+        clearTimeout(ringTimeout);
+        stopRingtone();
+        connectCall(type, true); currentCallUnsub(); currentCallUnsub = null;
+      } else if(d.status === 'rejected' || d.status === 'ended'){
+        endCall(true, false);
+      }
+    });
+
+    ringTimeout = setTimeout(async () => {
+      if(currentCallDocId){ await updateDoc(doc(db, "calls", currentCallDocId), { status: "ended" }).catch(()=>{}); }
+      noAnswerPopup(targetUid, targetName);
+    }, RING_DURATION);
+  }
+
+  async function connectCall(type, isCaller){
+    stopRingtone();
+    const callId = currentCallDocId;
+    const videosBox = document.getElementById('call-videos');
+    if(!videosBox) return;
+    try{
+      localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
+    }catch(e){
+      console.error("connectCall getUserMedia error:", e);
+      showMsg("Impossible d'accéder à la caméra/micro.", "error");
+      endCall();
+      return;
+    }
+    setupMuteControl();
+    if(type === 'video'){
+      videosBox.classList.remove('hidden');
+      document.getElementById('local-video').srcObject = localStream;
+      setupVideoControls();
+    }
+    document.getElementById('call-status').textContent = "Connexion...";
+    const iceConfig = await getIceServers();
+    peerConnection = new RTCPeerConnection(iceConfig);
+    localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+    peerConnection.ontrack = (ev) => {
+      const rv = document.getElementById('remote-video');
+      if(rv && rv.srcObject !== ev.streams[0]){
+        rv.srcObject = ev.streams[0];
+        remoteStream = ev.streams[0];
+        rv.play().catch(()=>{});
+      }
+      document.getElementById('call-status').textContent = "En communication";
+    };
+    const connectTimeout = setTimeout(() => {
+      if(peerConnection){ console.error("connectCall timeout: connectionState=", peerConnection.connectionState, "iceConnectionState=", peerConnection.iceConnectionState); showMsg("Connexion impossible : réseau incompatible. Réessayez sur un réseau wifi.", "error"); endCall(); }
+    }, 35000);
+    peerConnection.onconnectionstatechange = () => {
+      console.log("connectionState:", peerConnection.connectionState);
+      if(peerConnection.connectionState === 'connected'){ clearTimeout(connectTimeout); }
+      if(peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected' || peerConnection.connectionState === 'closed'){ console.error("peerConnection failed/disconnected/closed"); clearTimeout(connectTimeout); endCall(); }
+    };
+    peerConnection.oniceconnectionstatechange = () => {
+      console.log("iceConnectionState:", peerConnection.iceConnectionState);
+      if(peerConnection && (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed')){ clearTimeout(connectTimeout); }
+    };
+    const callDocRef = doc(db, "calls", callId);
+    const callerCandidates = collection(callDocRef, "callerCandidates");
+    const calleeCandidates = collection(callDocRef, "calleeCandidates");
+    const hangupUnsub = onSnapshot(callDocRef, (snap) => {
+      const d = snap.data();
+      if(d && (d.status === 'ended' || d.status === 'rejected')){
+        endCall(true, false);
+      }
+    });
+    webrtcUnsubs.push(hangupUnsub);
+    if(isCaller){
+      peerConnection.onicecandidate = (ev) => { if(ev.candidate) addDoc(callerCandidates, ev.candidate.toJSON()); };
+      const offerDescription = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offerDescription);
+      await updateDoc(callDocRef, { offer: { sdp: offerDescription.sdp, type: offerDescription.type } });
+      const unsubA = onSnapshot(callDocRef, async (snap) => {
+        const d = snap.data();
+        if(peerConnection && !peerConnection.currentRemoteDescription && d && d.answer){
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(d.answer));
+        }
+      });
+      const unsubB = onSnapshot(calleeCandidates, (snap) => {
+        snap.docChanges().forEach(c => { if(c.type === 'added' && peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data())); });
+      });
+      webrtcUnsubs.push(unsubA, unsubB);
+    } else {
+      peerConnection.onicecandidate = (ev) => { if(ev.candidate) addDoc(calleeCandidates, ev.candidate.toJSON()); };
+      let unsubOffer = null;
+      const offerData = await Promise.race([
+        new Promise((resolve) => {
+          unsubOffer = onSnapshot(callDocRef, (snap) => {
+            const d = snap.data();
+            if(d && d.offer){ resolve(d.offer); }
+          });
+        }),
+        new Promise((resolve) => setTimeout(() => resolve(null), 20000))
+      ]);
+      if(unsubOffer) unsubOffer();
+      if(!offerData){
+        clearTimeout(connectTimeout);
+        showMsg("Connexion impossible : l'appelant n'a pas pu etablir l'appel.", "error");
+        endCall();
+        return;
+      }
+      if(!peerConnection) return;
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offerData));
+      const answerDescription = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answerDescription);
+      await updateDoc(callDocRef, { answer: { sdp: answerDescription.sdp, type: answerDescription.type } });
+      const unsubC = onSnapshot(callerCandidates, (snap) => {
+        snap.docChanges().forEach(c => { if(c.type === 'added' && peerConnection) peerConnection.addIceCandidate(new RTCIceCandidate(c.doc.data())); });
+      });
+      webrtcUnsubs.push(unsubC);
+    }
+  }
+
+  function noAnswerPopup(targetUid, targetName){
+    endCall(false, false);
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="noans-bg">
+        <div class="noanswer-box">
+          <h2 style="font-size:17px;">${targetName} n'a pas répondu</h2>
+          <div class="item-sub" style="margin-top:6px;">Personne n'a décroché.</div>
+          <div class="row">
+            <button class="secondary" id="noans-msg">Laisser un message</button>
+            <button class="secondary" id="noans-close">Fermer</button>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('noans-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('noans-msg').addEventListener('click', () => {
+      root.innerHTML = '';
+      openContactOptions(targetUid, targetName, '');
+    });
+  }
+
+  function endCall(clearRoot, updateStatus){
+    if(clearRoot === undefined) clearRoot = true;
+    if(updateStatus === undefined) updateStatus = true;
+    clearTimeout(ringTimeout);
+    stopRingtone();
+    if(peerConnection){
+      try{ peerConnection.close(); }catch(e){}
+      peerConnection = null; } if(localStream){ localStream.getTracks().forEach(t => t.stop()); localStream = null; } if(remoteStream){ remoteStream.getTracks().forEach(t => t.stop()); remoteStream = null; } webrtcUnsubs.forEach(u => { try{ u(); }catch(e){} }); webrtcUnsubs = [];
+    if(currentCallUnsub){ currentCallUnsub(); currentCallUnsub = null; }
+    if(currentCallDocId && updateStatus){
+      const endedDocId = currentCallDocId;
+      updateDoc(doc(db, "calls", endedDocId), { status: "ended" }).catch(() => {
+        setTimeout(() => { updateDoc(doc(db, "calls", endedDocId), { status: "ended" }).catch(()=>{}); }, 800);
+      });
+    }
+    currentCallDocId = null;
+    localAudioMuted = false; localVideoMuted = false;
+    if(clearRoot) document.getElementById('call-root').innerHTML = '';
+  }
+
+  function handleIncomingCall(callId, data){
+    if(currentCallDocId){
+      // déjà en communication : on refuse automatiquement le nouvel appel
+      updateDoc(doc(db, "calls", callId), { status: "rejected" }).catch(()=>{});
+      return;
+    }
+    currentCallDocId = callId;
+    const callRoot = document.getElementById('call-root');
+    callRoot.innerHTML = `
+      <div class="call-screen" id="call-screen">
+        <div class="call-top">
+          <div class="call-avatar">${data.callerPhoto ? `<img src="${data.callerPhoto}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : initials(data.callerName || '?')}</div>
+          <div class="call-name">${data.callerName || 'Appel entrant'}</div>
+          <div class="call-status">${data.type === 'video' ? 'Appel vidéo' : 'Appel'} entrant...</div>
+        </div>
+        <div class="call-actions">
+          <div class="call-action">
+            <button class="call-btn hangup" id="btn-reject">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+            </button>
+            <span class="call-btn-label">Refuser</span>
+          </div>
+          <div class="call-action">
+            <button class="call-btn accept" id="btn-accept">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            <span class="call-btn-label">Accepter</span>
+          </div>
+        </div>
+      </div>`;
+
+    let handled = false; const missedTimeout = setTimeout(() => {
+      stopRingtone();
+      updateDoc(doc(db, "calls", callId), { status: "ended" }).catch(()=>{});
+      currentCallDocId = null;
+      callRoot.innerHTML = '';
+    }, RING_DURATION);
+
+    // si l'appelant raccroche pendant que ça sonne encore
+    const ringingUnsub = onSnapshot(doc(db, "calls", callId), (snap) => {
+      const d = snap.data();
+      if(d && d.status === 'ended'){
+        clearTimeout(missedTimeout);
+        stopRingtone();
+        currentCallDocId = null;
+        callRoot.innerHTML = '';
+        ringingUnsub();
+      }
+    });
+
+    document.getElementById('btn-reject').addEventListener('click', () => { if(handled) return; handled = true;
+      clearTimeout(missedTimeout);
+      stopRingtone();
+      updateDoc(doc(db, "calls", callId), { status: "rejected" }).catch(()=>{});
+      currentCallDocId = null;
+      callRoot.innerHTML = '';
+      ringingUnsub();
+    });
+    document.getElementById('btn-accept').addEventListener('click', async () => { if(handled) return; handled = true;
+      clearTimeout(missedTimeout);
+      stopRingtone();
+      ringingUnsub();
+      await updateDoc(doc(db, "calls", callId), { status: "accepted" });
+      callRoot.innerHTML = callScreenHtml(data.callerName || 'Appel', data.callerPhoto, "Connexion...");
+      document.getElementById('btn-hangup').addEventListener('click', () => endCall());
+      connectCall(data.type, false);
+    });
+    startRingtone();
+  }
+
+  function listenIncomingCalls(){ if(incomingCallsUnsub) return;
+    const q = query(collection(db, "calls"), where("calleeId", "==", currentUser.uid), where("status", "==", "ringing"));
+    incomingCallsUnsub = onSnapshot(q, (snap) => {
+      snap.docChanges().forEach(change => {
+        if(change.type === 'added') handleIncomingCall(change.doc.id, change.doc.data());
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
