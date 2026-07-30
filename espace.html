@@ -185,6 +185,7 @@
   .crop-frame img{position:absolute; top:0; left:0; user-select:none; -webkit-user-drag:none;}
   .locate-row{display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--bordure);}
   .locate-sub{font-size:12px; color:var(--texte-doux); flex:1;}
+  .btn-remove-locate{background:var(--rouge); border-color:var(--rouge); color:#fff;}
 </style>
 </head>
 <body>
@@ -266,6 +267,7 @@
     <div class="locate-row">
       <div class="locate-sub" id="c-locate-status">Position non renseignée</div>
       <button class="icon-btn" id="btn-locate-client">Me localiser</button>
+      <button class="icon-btn btn-remove-locate hidden" id="btn-remove-locate-client">Retirer</button>
     </div>
   </div>
 
@@ -328,6 +330,7 @@
     <div class="locate-row">
       <div class="locate-sub" id="a-locate-status">Position non renseignée</div>
       <button class="icon-btn" id="btn-locate-artisan">Me localiser</button>
+      <button class="icon-btn btn-remove-locate hidden" id="btn-remove-locate-artisan">Retirer</button>
     </div>
   </div>
 
@@ -500,7 +503,7 @@
       document.getElementById('a-adresse').value = currentData.adresse || '';
       document.getElementById('a-telephone').value = currentData.telephone || '';
       document.getElementById('a-horaires').value = currentData.horaires || '';
-      if(currentData.lat) document.getElementById('a-locate-status').textContent = "Position enregistrée ✓";
+      if(currentData.lat){ document.getElementById('a-locate-status').textContent = "Position enregistrée ✓"; document.getElementById('btn-remove-locate-artisan').classList.remove('hidden'); }
       renderCertificationCard();
       document.getElementById('btn-open-encheres').addEventListener('click', openEncheresVille);
     } else {
@@ -508,7 +511,7 @@
       document.getElementById('c-ville').value = currentData.ville || '';
       document.getElementById('c-adresse').value = currentData.adresse || '';
       document.getElementById('c-telephone').value = currentData.telephone || '';
-      if(currentData.lat) document.getElementById('c-locate-status').textContent = "Position enregistrée ✓";
+      if(currentData.lat){ document.getElementById('c-locate-status').textContent = "Position enregistrée ✓"; document.getElementById('btn-remove-locate-client').classList.remove('hidden'); }
       document.getElementById('c-tel-visibility-toggle').classList.toggle('on', currentData.telephoneVisible === false);
       document.getElementById('c-email-visibility-toggle').classList.toggle('on', currentData.emailVisible === false);
       document.getElementById('c-adresse-visibility-toggle').classList.toggle('on', currentData.adresseVisible === false);
@@ -822,8 +825,10 @@
     e.currentTarget.classList.toggle('on');
   });
 
-  document.getElementById('btn-locate-client').addEventListener('click', () => locateMe('c-locate-status'));
-  document.getElementById('btn-locate-artisan').addEventListener('click', () => locateMe('a-locate-status'));
+  document.getElementById('btn-locate-client').addEventListener('click', () => locateMe('c-locate-status', 'btn-remove-locate-client'));
+  document.getElementById('btn-locate-artisan').addEventListener('click', () => locateMe('a-locate-status', 'btn-remove-locate-artisan'));
+  document.getElementById('btn-remove-locate-client').addEventListener('click', () => removeLocation('c-locate-status', 'btn-remove-locate-client'));
+  document.getElementById('btn-remove-locate-artisan').addEventListener('click', () => removeLocation('a-locate-status', 'btn-remove-locate-artisan'));
   document.getElementById('btn-add-autre-metier').addEventListener('click', addCustomMetierChip);
 
   function formatPhoneInput(el){
@@ -835,7 +840,7 @@
   formatPhoneInput(document.getElementById('c-telephone'));
   formatPhoneInput(document.getElementById('a-telephone'));
 
-  function locateMe(statusId){
+  function locateMe(statusId, removeBtnId){
     const statusEl = document.getElementById(statusId);
     if(!navigator.geolocation){ statusEl.textContent = "Géolocalisation non disponible sur cet appareil."; return; }
     statusEl.textContent = "Localisation en cours...";
@@ -844,9 +849,17 @@
       await updateDoc(doc(db, "users", currentUser.uid), { lat, lng });
       currentData.lat = lat; currentData.lng = lng;
       statusEl.textContent = "Position enregistrée ✓";
+      if(removeBtnId) document.getElementById(removeBtnId).classList.remove('hidden');
     }, () => {
       statusEl.textContent = "Autorisation refusée. Activez la localisation dans votre navigateur.";
     });
+  }
+
+  async function removeLocation(statusId, removeBtnId){
+    await updateDoc(doc(db, "users", currentUser.uid), { lat: null, lng: null });
+    currentData.lat = null; currentData.lng = null;
+    document.getElementById(statusId).textContent = "Position non renseignée";
+    document.getElementById(removeBtnId).classList.add('hidden');
   }
 
   document.getElementById('ad-metier').addEventListener('change', (e) => {
@@ -1068,7 +1081,13 @@
     const poolDocs = allDocs.filter(x => x.encherMontant == null);
     const positioned = poolDocs.filter(x => x.data.featuredPosition != null)
       .sort((a, b) => (a.data.featuredPosition - b.data.featuredPosition) || ((a.data.featuredAt||0) - (b.data.featuredAt||0)));
+    // Les artisans qui ne payent pas (ni enchère, ni position fixe) tournent de manière
+    // aléatoire à chaque chargement de la liste : pas d'ordre figé pour eux.
     const unpositioned = poolDocs.filter(x => x.data.featuredPosition == null);
+    for(let i = unpositioned.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [unpositioned[i], unpositioned[j]] = [unpositioned[j], unpositioned[i]];
+    }
     const finalPool = new Array(poolDocs.length).fill(null);
     positioned.forEach(x => {
       let idx = Math.max(0, x.data.featuredPosition - 1);
