@@ -347,7 +347,8 @@
 
   <div class="card" id="artisan-reviews-card">
     <h2>Mes avis</h2>
-    <div id="my-reviews-list"><div class="empty">Chargement...</div></div>
+    <div id="my-reviews-summary" class="item-sub">Chargement...</div>
+    <button class="secondary" id="btn-open-my-reviews" style="margin-top:10px;">Voir mes avis</button>
   </div>
 
   <div class="card" id="artisan-wall-card">
@@ -461,7 +462,7 @@
     document.getElementById('artisan-profile-card').classList.toggle('hidden', previewMode);
     document.getElementById('welcome-card').classList.toggle('hidden', previewMode);
 
-    if(isArtisanRole) { loadAdsWall(); loadReviews(currentUser.uid, 'own', 'my-reviews-list'); }
+    if(isArtisanRole) { loadAdsWall(); document.getElementById('my-reviews-summary').innerHTML = renderStars(currentData.noteMoyenne || 0, currentData.nbAvis || 0); }
     else { loadArtisansList(); loadMyAds(); }
   }
 
@@ -506,6 +507,7 @@
       if(currentData.lat){ document.getElementById('a-locate-status').textContent = "Position enregistrée ✓"; document.getElementById('btn-remove-locate-artisan').classList.remove('hidden'); }
       renderCertificationCard();
       document.getElementById('btn-open-encheres').addEventListener('click', openEncheresVille);
+      document.getElementById('btn-open-my-reviews').addEventListener('click', openMyReviewsModal);
     } else {
       document.getElementById('c-email-display').value = currentData.email || '';
       document.getElementById('c-ville').value = currentData.ville || '';
@@ -532,7 +534,7 @@
       const adSnap = await getDoc(doc(db, "ads", adId));
       if(!adSnap.exists()) return;
       const ad = adSnap.data();
-      openContactOptions(ad.clientId, ad.prenom + ' ' + ad.nom, ad.email, ad.photo || null);
+      openClientModal(ad);
     } catch(e){ /* lien invalide ou annonce supprimée, on ignore */ }
   }
 
@@ -545,8 +547,11 @@
       <div class="modal-bg" id="menu-bg" style="justify-content:flex-end; align-items:stretch;">
         <div class="side-panel">
           <button class="modal-close" id="menu-close">Fermer</button>
-          <div class="side-panel-item" id="menu-logout">Déconnexion</div>
+          <div class="side-panel-item" id="menu-fonctionnement">Fonctionnement</div>
+          <div class="side-panel-item" id="menu-mentions-legales">Mentions légales</div>
+          <div class="side-panel-item" id="menu-partenaires">Partenaires</div>
           <div class="side-panel-item" id="menu-contact">Contact</div>
+          <div class="side-panel-item" id="menu-logout">Déconnexion</div>
           <div class="side-panel-item danger" id="menu-close-account">Clôturer mon compte</div>
         </div>
       </div>`;
@@ -560,7 +565,25 @@
       root.innerHTML = '';
       openContactAdminOptions();
     });
+    document.getElementById('menu-fonctionnement').addEventListener('click', () => openInfoModal('Fonctionnement'));
+    document.getElementById('menu-mentions-legales').addEventListener('click', () => openInfoModal('Mentions légales'));
+    document.getElementById('menu-partenaires').addEventListener('click', () => openInfoModal('Partenaires'));
     document.getElementById('menu-close-account').addEventListener('click', closeAccount);
+  }
+
+  // Contenu de ces trois pages à définir ensemble par la suite.
+  function openInfoModal(title){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="info-modal-bg">
+        <div class="modal">
+          <button class="modal-close" id="info-modal-close">Fermer</button>
+          <h2 style="font-size:19px; margin-top:4px;">${title}</h2>
+          <div class="item-sub" style="margin-top:14px;">Contenu à venir.</div>
+        </div>
+      </div>`;
+    document.getElementById('info-modal-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('info-modal-bg').addEventListener('click', (e) => { if(e.target.id === 'info-modal-bg') root.innerHTML = ''; });
   }
 
   async function deleteMyAdsAndProfile(){
@@ -1270,6 +1293,22 @@
     if(annoncePhoto){ annoncePhoto.addEventListener('click', () => openPhotoZoom(d.photoAnnonce)); }
   }
 
+  function openMyReviewsModal(){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="reviews-modal-bg">
+        <div class="modal">
+          <button class="modal-close" id="reviews-modal-close">Fermer</button>
+          <h2 style="font-size:19px; margin-top:4px;">Mes avis</h2>
+          <div style="margin-top:4px;">${renderStars(currentData.noteMoyenne || 0, currentData.nbAvis || 0)}</div>
+          <div id="my-reviews-list-modal" style="margin-top:14px;"><div class="empty">Chargement...</div></div>
+        </div>
+      </div>`;
+    document.getElementById('reviews-modal-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('reviews-modal-bg').addEventListener('click', (e) => { if(e.target.id === 'reviews-modal-bg') root.innerHTML = ''; });
+    loadReviews(currentUser.uid, 'own', 'my-reviews-list-modal');
+  }
+
   async function loadReviews(artisanId, mode, targetId){
     targetId = targetId || 'reviews-list';
     const box = document.getElementById(targetId);
@@ -1477,7 +1516,7 @@
           <label style="margin-top:16px;">Placer / augmenter mon offre (€)</label>
           <input type="number" class="no-spin" inputmode="numeric" id="ench-montant-input" min="1" step="1" placeholder="Tapez le montant de votre choix, ex : 25">
           <div class="item-sub" style="margin-top:6px;">Après envoi, Presta+ vous contactera pour le règlement ; votre position se met à jour dès validation.</div>
-          <button class="primary" id="btn-submit-ench" style="margin-top:14px;">Envoyer mon offre</button>
+          <button class="primary" id="btn-submit-ench" style="margin-top:14px;">Enchérir</button>
           <div id="ench-pending-note" class="item-sub" style="margin-top:10px;"></div>
         </div>
       </div>`;
@@ -1520,7 +1559,13 @@
       const myValid = bestByArtisan[currentUser.uid];
       let note = '';
       if(myPending) note += `Votre offre de ${myPending.montant} € est en attente de validation par l'administration. `;
-      if(myValid) note += `Votre offre active actuellement : ${myValid.montant} €.`;
+      if(myValid) note += `Votre offre active actuellement : ${myValid.montant} €. `;
+      const myCandidate = myPending ? myPending.montant : (myValid ? myValid.montant : null);
+      if(myCandidate != null){
+        const othersMontants = Object.entries(bestByArtisan).filter(([uid]) => uid !== currentUser.uid).map(([,v]) => v.montant);
+        const position = othersMontants.filter(m => m > myCandidate).length + 1;
+        note += `Votre position à ${encheresVilleActuelle} : ${position}${position === 1 ? 're' : 'e'}${myPending ? ' (une fois validée)' : ''}.`;
+      }
       pendingNote.textContent = note;
     }catch(e){
       console.error(e);
@@ -1557,7 +1602,7 @@
         await renderEncheresModal();
       }catch(e){
         console.error(e);
-        btn.disabled = false; btn.textContent = "Envoyer mon offre";
+        btn.disabled = false; btn.textContent = "Enchérir";
         showMsg("Erreur lors de l'envoi : " + (e.message || e.code || "inconnue"), "error");
       }
     });
