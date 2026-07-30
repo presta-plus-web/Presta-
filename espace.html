@@ -1488,29 +1488,38 @@
   }
 
   // ---------- ENCHÈRES VILLE (mise en avant payante) ----------
+  // Règle : un artisan ne peut avoir qu'une seule ville d'enchère à la fois (jamais plusieurs
+  // en parallèle). Tant qu'il a une offre en attente ou validée quelque part, cette ville est
+  // verrouillée ; il ne peut pas en choisir une autre.
   let encheresVilleActuelle = null;
+  let encheresVilleVerrouillee = false;
   async function openEncheresVille(){
     const villes = (currentData.villesIntervention || []).filter(Boolean);
     if(!villes.length){
       showMsg("Complétez d'abord vos villes d'intervention dans 'Mon profil'.", "error");
       return;
     }
-    encheresVilleActuelle = villes[0];
+    const mySnap = await getDocs(query(collection(db, "encheres"), where("artisanUid", "==", currentUser.uid)));
+    const myActive = mySnap.docs.map(s => s.data()).find(e => e.status === 'en_attente' || e.status === 'validee');
+    encheresVilleVerrouillee = !!myActive;
+    encheresVilleActuelle = myActive ? myActive.ville : villes[0];
     await renderEncheresModal();
   }
 
   async function renderEncheresModal(){
     const villes = (currentData.villesIntervention || []).filter(Boolean);
+    const peutChoisir = villes.length > 1 && !encheresVilleVerrouillee;
     const root = document.getElementById('modal-root');
     root.innerHTML = `
       <div class="modal-bg" id="ench-bg">
         <div class="modal">
           <button class="modal-close" id="ench-close">Fermer</button>
           <h2 style="font-size:18px; margin-top:6px;">Enchères Ville</h2>
-          <div class="item-sub">Chaque artisan peut proposer un montant pour apparaître plus haut dans la liste envoyée aux clients de sa ville. Celui qui propose le plus est affiché en premier, marqué "Top recommandation". Le montant reste valable tant que personne ne propose plus que vous.</div>
-          ${villes.length > 1 ? `
+          <div class="item-sub">Chaque artisan peut proposer un montant pour apparaître plus haut dans la liste envoyée aux clients de sa ville. Celui qui propose le plus est affiché en premier, marqué "Top recommandation". Le montant reste valable tant que personne ne propose plus que vous. Un artisan ne peut enchérir que dans une seule ville à la fois.</div>
+          ${peutChoisir ? `
           <label style="margin-top:10px;">Ville</label>
-          <select id="ench-ville-select">${villes.map(v => `<option value="${v}" ${v === encheresVilleActuelle ? 'selected' : ''}>${v}</option>`).join('')}</select>` : ''}
+          <select id="ench-ville-select">${villes.map(v => `<option value="${v}" ${v === encheresVilleActuelle ? 'selected' : ''}>${v}</option>`).join('')}</select>` : `
+          <div class="item-sub" style="margin-top:10px;">Ville choisie : <b>${encheresVilleActuelle}</b>${encheresVilleVerrouillee ? ' (verrouillée tant que votre offre est active — retirez-la dans la console pour en changer)' : ''}</div>`}
           <div class="item-sub" style="margin-top:12px;">Offres actuelles à <b>${encheresVilleActuelle}</b> (du plus haut au plus bas, sans les noms) :</div>
           <div id="ench-list" style="margin-top:8px;"><div class="empty">Chargement...</div></div>
           <label style="margin-top:16px;">Placer / augmenter mon offre (€)</label>
@@ -1522,7 +1531,7 @@
       </div>`;
     document.getElementById('ench-close').addEventListener('click', () => root.innerHTML = '');
     document.getElementById('ench-bg').addEventListener('click', (e) => { if(e.target.id === 'ench-bg') root.innerHTML = ''; });
-    if(villes.length > 1){
+    if(peutChoisir){
       document.getElementById('ench-ville-select').addEventListener('change', (e) => {
         encheresVilleActuelle = e.target.value;
         renderEncheresModal();
@@ -1599,6 +1608,7 @@
           }).catch((e) => console.error("Erreur notification enchère :", e));
         }
         showMsg("Offre envoyée, en attente de validation. Merci !", "ok");
+        encheresVilleVerrouillee = true;
         await renderEncheresModal();
       }catch(e){
         console.error(e);
