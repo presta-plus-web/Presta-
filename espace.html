@@ -565,13 +565,77 @@
       root.innerHTML = '';
       openContactAdminOptions();
     });
-    document.getElementById('menu-fonctionnement').addEventListener('click', () => openInfoModal('Fonctionnement'));
+    document.getElementById('menu-fonctionnement').addEventListener('click', openFonctionnementModal);
     document.getElementById('menu-mentions-legales').addEventListener('click', () => openInfoModal('Mentions légales'));
     document.getElementById('menu-partenaires').addEventListener('click', () => openInfoModal('Partenaires'));
     document.getElementById('menu-close-account').addEventListener('click', closeAccount);
   }
 
-  // Contenu de ces trois pages à définir ensemble par la suite.
+  // Guide complet du fonctionnement du site, bouton par bouton, côté client puis côté artisan.
+  function openFonctionnementModal(){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="fonct-bg">
+        <div class="modal" style="max-width:560px;">
+          <button class="modal-close" id="fonct-close">Fermer</button>
+          <div style="text-align:center; margin-top:4px;">
+            <img src="logo.png" alt="Presta+" style="max-width:180px; width:100%; height:auto;">
+          </div>
+          <h2 style="font-size:20px; text-align:center; margin-top:8px;">Comment fonctionne Presta+</h2>
+          <div class="item-sub" style="text-align:center; margin-top:4px;">Le guide complet, bouton par bouton.</div>
+
+          <h3 style="margin-top:24px; color:var(--marine); font-size:17px;">1. Côté client</h3>
+
+          <div style="margin-top:14px;"><b>Inscription et connexion</b>
+          <div class="item-desc" style="margin-top:4px;">Sur la page d'accueil, choisissez "Créer un compte" puis le rôle "Client". Renseignez votre nom et prénom, votre e-mail et un mot de passe — ou connectez-vous directement avec votre compte Google via "Continuer avec Google". Vous arrivez ensuite sur votre espace personnel.</div></div>
+
+          <div style="margin-top:14px;"><b>Mon profil</b>
+          <div class="item-desc" style="margin-top:4px;">Complétez votre ville, votre adresse, votre téléphone et une photo de profil (facultative). Trois interrupteurs permettent de masquer votre téléphone, votre e-mail ou votre adresse aux artisans si vous préférez rester discret. Le bouton "Me localiser" enregistre votre position exacte pour affiner la carte ; le bouton rouge "Retirer" à côté l'efface à tout moment.</div></div>
+
+          <div style="margin-top:14px;"><b>Déposer une annonce</b>
+          <div class="item-desc" style="margin-top:4px;">Choisissez le métier recherché (ou "Autre" pour préciser), décrivez votre besoin et ajoutez une photo si utile. En cliquant sur "Publier l'annonce", tous les artisans de votre ville exerçant ce métier reçoivent aussitôt un e-mail avec les détails de votre demande.</div></div>
+
+          <div style="margin-top:14px;"><b>Mes annonces</b>
+          <div class="item-desc" style="margin-top:4px;">Retrouvez ici toutes vos annonces publiées, modifiables ou supprimables à tout moment.</div></div>
+
+          <div style="margin-top:14px;"><b>Artisans près de chez vous</b>
+          <div class="item-desc" style="margin-top:4px;">Une carte et une liste affichent les artisans de votre ville. Ceux ayant misé sur une "Enchère Ville" apparaissent en tête, avec la mention "Top recommandation" pour le mieux placé ; les artisans mis en avant par Presta+ suivent, puis le reste de la liste, qui change à chaque actualisation. Cliquez sur un artisan pour voir sa fiche complète (métiers, ville, téléphone, avis) et le bouton "Contacter" pour lui écrire ou l'appeler.</div></div>
+
+          <div style="margin-top:14px;"><b>Avis</b>
+          <div class="item-desc" style="margin-top:4px;">Depuis la fiche d'un artisan, laissez une note de 1 à 5 étoiles et un commentaire. Vous pouvez modifier ou supprimer votre avis à tout moment.</div></div>
+
+          <div style="margin-top:14px;"><b>Menu ☰</b>
+          <div class="item-desc" style="margin-top:4px;">En haut de l'écran, il donne accès à : Fonctionnement (cette page), Mentions légales, Partenaires, Contact (pour écrire à l'équipe Presta+), Déconnexion, et Clôturer mon compte (suppression définitive de votre profil et de vos données).</div></div>
+
+          <h3 style="margin-top:26px; color:var(--marine); font-size:17px;">2. Côté artisan</h3>
+
+          <div style="margin-top:14px;"><b>Inscription et connexion</b>
+          <div class="item-desc" style="margin-top:4px;">Même parcours que le client, en choisissant le rôle "Artisan". Vous renseignez votre dénomination sociale, puis complétez votre profil professionnel.</div></div>
+
+          <div style="margin-top:14px;"><b>Mon profil</b>
+          <div class="item-desc" style="margin-top:4px;">Sélectionnez vos métiers exercés et vos villes d'intervention (plusieurs possibles), votre adresse, votre téléphone et vos horaires d'ouverture. L'interrupteur "Disponible" indique aux clients si vous pouvez intervenir immédiatement. Comme côté client, "Me localiser" et le bouton rouge "Retirer" gèrent votre position sur la carte.</div></div>
+
+          <div style="margin-top:14px;"><b>Certification professionnelle</b>
+          <div class="item-desc" style="margin-top:4px;">Envoyez votre extrait Kbis et votre attestation d'assurance responsabilité civile professionnelle. Une fois vérifiés par Presta+, un badge "Certifié" apparaît à côté de votre nom, visible par tous les clients.</div></div>
+
+          <div style="margin-top:14px;"><b>Enchères Ville</b>
+          <div class="item-desc" style="margin-top:4px;">Proposez un montant pour être mis en avant auprès des clients d'une seule ville à la fois. Le bouton "Enchérir" envoie votre offre ; elle reste "en attente" jusqu'à validation par Presta+ après règlement. Vous voyez en temps réel les offres actuelles de votre ville (montants seuls, sans les noms) ainsi que votre position exacte (ex : "2e"). Celui qui propose le plus est affiché en premier auprès des clients, marqué "Top recommandation". Vous ne pouvez avoir qu'une seule ville d'enchère active à la fois.</div></div>
+
+          <div style="margin-top:14px;"><b>Mes avis</b>
+          <div class="item-desc" style="margin-top:4px;">Votre note moyenne s'affiche sur votre tableau de bord ; le bouton "Voir mes avis" ouvre la liste complète de vos avis clients, où vous pouvez répondre publiquement ou signaler un avis abusif.</div></div>
+
+          <div style="margin-top:14px;"><b>Annonces près de chez vous</b>
+          <div class="item-desc" style="margin-top:4px;">Toutes les demandes des clients de vos villes correspondant à vos métiers apparaissent ici, avec une carte de localisation. Cliquez sur une annonce pour voir la fiche complète du client (nom, description de sa demande, ville, coordonnées si rendues visibles par le client, photo éventuelle) puis "Contacter" pour lui répondre. Vous recevez aussi un e-mail à chaque nouvelle demande correspondant à votre profil ; le lien du mail ouvre directement cette même fiche.</div></div>
+
+          <div style="margin-top:14px;"><b>Menu ☰</b>
+          <div class="item-desc" style="margin-top:4px;">Identique au menu client : Fonctionnement, Mentions légales, Partenaires, Contact, Déconnexion, Clôturer mon compte.</div></div>
+        </div>
+      </div>`;
+    document.getElementById('fonct-close').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('fonct-bg').addEventListener('click', (e) => { if(e.target.id === 'fonct-bg') root.innerHTML = ''; });
+  }
+
+  // Contenu de ces deux pages à définir ensemble par la suite.
   function openInfoModal(title){
     const root = document.getElementById('modal-root');
     root.innerHTML = `
