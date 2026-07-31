@@ -97,6 +97,10 @@
   .hidden{display:none !important;}
   .modal-bg{position:fixed; inset:0; background:rgba(16,29,44,0.5); display:flex; align-items:flex-end; justify-content:center; z-index:2000;}
   .modal{background:#fff; border-radius:16px 16px 0 0; padding:22px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto;}
+  @media (min-width: 760px){
+    #ench-bg{ align-items:center; }
+    #ench-bg .modal{ border-radius:16px; }
+  }
   .modal-close{background:none; border:none; color:var(--texte-doux); font-size:14px; font-weight:600; float:right; cursor:pointer;}
   .photo-zoom-bg{position:fixed; inset:0; background:rgba(10,16,24,0.9); display:flex; align-items:center; justify-content:center; z-index:2500; padding:24px;}
   .photo-zoom-bg img{max-width:100%; max-height:100%; border-radius:10px; object-fit:contain; display:block;}
@@ -1603,10 +1607,8 @@
           <div class="item-sub" style="margin-top:10px;">Ville active : <b>${encheresVilleActuelle}</b>, jusqu'au ${finStr}. Vous pouvez encore augmenter votre offre sur cette ville ci-dessous.</div>
           ` : `
           <label style="margin-top:10px;">Ville</label>
-          <div style="position:relative;">
-            <input type="text" id="ench-ville-input" placeholder="Tapez le nom d'une ville de France..." autocomplete="off">
-            <div id="ench-ville-suggestions" class="hidden" style="position:absolute; left:0; right:0; top:100%; background:#fff; border:1px solid var(--bordure); border-radius:10px; margin-top:4px; max-height:220px; overflow-y:auto; z-index:10; box-shadow:0 4px 14px rgba(0,0,0,0.1);"></div>
-          </div>`}
+          <input type="text" id="ench-ville-input" placeholder="Tapez le nom d'une ville de France..." autocomplete="off">
+          <div id="ench-ville-suggestions" class="hidden" style="background:#fff; border:1px solid var(--bordure); border-radius:10px; margin-top:6px; max-height:220px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>`}
           <div id="ench-details" class="hidden">
             <div class="item-sub" style="margin-top:12px;">Offres actuelles à <b id="ench-ville-label"></b> (du plus haut au plus bas, sans les noms) :</div>
             <div id="ench-list" style="margin-top:8px;"><div class="empty">Chargement...</div></div>
@@ -1614,7 +1616,7 @@
             <input type="number" class="no-spin" inputmode="numeric" id="ench-montant-input" min="1" step="1" placeholder="Ex : 10">
             <label style="margin-top:12px;">Durée (nombre de jours)</label>
             <input type="number" class="no-spin" inputmode="numeric" id="ench-duree-input" min="1" step="1" value="1">
-            <div class="item-sub" style="margin-top:6px;" id="ench-total-preview">Total à payer : —</div>
+            <div id="ench-total-preview" style="margin-top:10px; font-size:19px; font-weight:700; color:var(--marine);">Total à payer : —</div>
             <div class="item-sub" style="margin-top:6px;">Le paiement se fait par carte bancaire ou compte PayPal. Une fois le paiement confirmé, votre offre est activée immédiatement, pour la durée choisie.</div>
             <button class="primary" id="btn-submit-ench" style="margin-top:14px;">Enchérir</button>
             <div id="paypal-button-container" class="hidden" style="margin-top:14px;"></div>
@@ -1828,18 +1830,33 @@
         text: messageTexte, read: false, createdAt: serverTimestamp()
       });
 
-      // E-mail de confirmation à l'artisan lui-même.
+      // E-mail de confirmation à l'artisan lui-même. On utilise en priorité l'adresse du compte
+      // Firebase Auth (currentUser.email), toujours renseignée, plutôt que currentData.email qui
+      // peut être vide selon comment le profil a été créé — un champ vide envoyait la notification
+      // vers l'adresse par défaut du compte EmailJS au lieu de celle de l'artisan.
+      const artisanEmailReel = currentUser.email || currentData.email || '';
       if(window.emailjs){
         const lienEspace = window.location.origin + window.location.pathname;
         emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          email_artisan: currentData.email || '',
+          email_artisan: artisanEmailReel,
           metier: "CONFIRMATION ENCHÈRE VILLE — " + reference,
           ville: encheresVilleActuelle,
           description: messageTexte,
-          email_client: currentData.email || '',
+          email_client: artisanEmailReel,
           lien_client: lienEspace,
           name: artisanName
-        }).catch((e) => console.error("Erreur notification enchère :", e));
+        }).catch((e) => console.error("Erreur notification enchère (artisan) :", e));
+
+        // Copie à l'administration Presta+ pour suivi des paiements.
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          email_artisan: "prestaplus.officiel@gmail.com",
+          metier: "NOUVELLE ENCHÈRE VILLE PAYÉE — " + reference,
+          ville: encheresVilleActuelle,
+          description: `${artisanName} (${artisanEmailReel}) vient de payer une enchère à ${encheresVilleActuelle} : ${montant} €/jour x ${duree} jour(s) = ${total} €. ${messageTexte}`,
+          email_client: artisanEmailReel,
+          lien_client: lienEspace,
+          name: artisanName
+        }).catch((e) => console.error("Erreur notification enchère (admin) :", e));
       }
 
       showMsg(`Paiement reçu, offre activée ! Vous êtes ${position}${position === 1 ? 're' : 'e'} à ${encheresVilleActuelle}. Confirmation envoyée par e-mail et par message.`, "ok");
