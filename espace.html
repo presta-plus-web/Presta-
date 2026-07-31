@@ -1578,9 +1578,12 @@
   // choisit par recherche parmi les vraies communes de France (API officielle geo.api.gouv.fr),
   // indépendamment de ses villes d'intervention. Le prix = montant par jour x nombre de jours
   // choisis ; le paiement PayPal valide l'offre automatiquement (pas de validation manuelle).
-  let encheresVilleActuelle = null;
-  let encheresVilleVerrouillee = false;
-  let encheresVilleExpireAt = null;
+  // Important : l'artisan peut à tout moment choisir une AUTRE ville que celle où il a déjà une
+  // offre active — dans ce cas, payer la nouvelle offre retire automatiquement l'ancienne (une
+  // seule ville active à la fois, mais on peut en changer librement, pas de blocage définitif).
+  let encheresVilleActuelle = null;       // ville affichée / en cours de sélection dans le popup
+  let encheresVilleActiveInitiale = null; // ville où l'artisan a déjà une offre active (si existante)
+  let encheresVilleExpireAt = null;       // expiration de cette offre active
 
   async function openEncheresVille(){
     const mySnap = await getDocs(query(collection(db, "encheres"), where("artisanUid", "==", currentUser.uid)));
@@ -1588,27 +1591,24 @@
     const myActive = mySnap.docs.map(s => s.data())
       .filter(e => e.status === 'validee' && e.expireAt && e.expireAt > now)
       .sort((a,b) => b.expireAt - a.expireAt)[0];
-    encheresVilleVerrouillee = !!myActive;
-    encheresVilleActuelle = myActive ? myActive.ville : null;
+    encheresVilleActiveInitiale = myActive ? myActive.ville : null;
     encheresVilleExpireAt = myActive ? myActive.expireAt : null;
+    encheresVilleActuelle = encheresVilleActiveInitiale; // pré-rempli, mais modifiable
     await renderEncheresModal();
   }
 
   async function renderEncheresModal(){
     const root = document.getElementById('modal-root');
-    const finStr = encheresVilleExpireAt ? new Date(encheresVilleExpireAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
     root.innerHTML = `
       <div class="modal-bg" id="ench-bg">
         <div class="modal">
           <button class="modal-close" id="ench-close">Fermer</button>
           <h2 style="font-size:18px; margin-top:6px;">Enchères Ville</h2>
-          <div class="item-sub">Choisissez une ville et un nombre de jours : plus votre offre est élevée, plus vous apparaissez en haut de la liste envoyée aux clients de cette ville, avec la mention "Top recommandation" pour le premier. Vous ne pouvez avoir qu'une seule ville active à la fois.</div>
-          ${encheresVilleVerrouillee ? `
-          <div class="item-sub" style="margin-top:10px;">Ville active : <b>${encheresVilleActuelle}</b>, jusqu'au ${finStr}. Vous pouvez encore augmenter votre offre sur cette ville ci-dessous.</div>
-          ` : `
+          <div class="item-sub">Choisissez une ville et un nombre de jours : plus votre offre est élevée, plus vous apparaissez en haut de la liste envoyée aux clients de cette ville, avec la mention "Top recommandation" pour le premier. Vous ne pouvez avoir qu'une seule ville active à la fois, mais vous pouvez en changer quand vous voulez en tapant une nouvelle ville ci-dessous.</div>
           <label style="margin-top:10px;">Ville</label>
-          <input type="text" id="ench-ville-input" placeholder="Tapez le nom d'une ville de France..." autocomplete="off">
-          <div id="ench-ville-suggestions" class="hidden" style="background:#fff; border:1px solid var(--bordure); border-radius:10px; margin-top:6px; max-height:220px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>`}
+          <input type="text" id="ench-ville-input" placeholder="Tapez le nom d'une ville de France..." autocomplete="off" value="${encheresVilleActuelle || ''}">
+          <div id="ench-ville-suggestions" class="hidden" style="background:#fff; border:1px solid var(--bordure); border-radius:10px; margin-top:6px; max-height:220px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>
+          <div id="ench-ville-note" class="item-sub" style="margin-top:8px;"></div>
           <div id="ench-details" class="hidden">
             <div class="item-sub" style="margin-top:12px;">Offres actuelles à <b id="ench-ville-label"></b> (du plus haut au plus bas, sans les noms) :</div>
             <div id="ench-list" style="margin-top:8px;"><div class="empty">Chargement...</div></div>
@@ -1627,41 +1627,59 @@
     document.getElementById('ench-close').addEventListener('click', () => root.innerHTML = '');
     document.getElementById('ench-bg').addEventListener('click', (e) => { if(e.target.id === 'ench-bg') root.innerHTML = ''; });
 
-    if(!encheresVilleVerrouillee){
-      const input = document.getElementById('ench-ville-input');
-      const suggBox = document.getElementById('ench-ville-suggestions');
-      let debounceTimer = null;
-      input.addEventListener('input', () => {
-        const q = input.value.trim();
-        clearTimeout(debounceTimer);
-        if(q.length < 2){ suggBox.classList.add('hidden'); suggBox.innerHTML = ''; return; }
-        debounceTimer = setTimeout(async () => {
-          try{
-            const res = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux&boost=population&limit=8`);
-            const villesTrouvees = await res.json();
-            if(!Array.isArray(villesTrouvees) || !villesTrouvees.length){
-              suggBox.innerHTML = '<div style="padding:10px 14px; color:var(--texte-doux); font-size:14px;">Aucune ville trouvée.</div>';
-              suggBox.classList.remove('hidden');
-              return;
-            }
-            suggBox.innerHTML = villesTrouvees.map(v => `<div class="ench-ville-opt" data-ville="${v.nom}" style="padding:10px 14px; cursor:pointer; font-size:14px; border-bottom:1px solid var(--bordure);">${v.nom}${v.codesPostaux && v.codesPostaux[0] ? ' (' + v.codesPostaux[0] + ')' : ''}</div>`).join('');
+    function updateVilleNote(){
+      const noteEl = document.getElementById('ench-ville-note');
+      if(!noteEl) return;
+      const finStr = encheresVilleExpireAt ? new Date(encheresVilleExpireAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+      if(!encheresVilleActiveInitiale){
+        noteEl.textContent = '';
+      } else if(encheresVilleActuelle === encheresVilleActiveInitiale){
+        noteEl.textContent = `Vous avez une offre active à ${encheresVilleActiveInitiale}, jusqu'au ${finStr}. Vous pouvez l'augmenter ci-dessous, ou taper une autre ville pour en changer.`;
+      } else {
+        noteEl.innerHTML = `<b style="color:var(--rouge);">Attention :</b> payer une offre à ${encheresVilleActuelle} retirera automatiquement votre offre active à ${encheresVilleActiveInitiale}.`;
+      }
+    }
+    updateVilleNote();
+
+    const input = document.getElementById('ench-ville-input');
+    const suggBox = document.getElementById('ench-ville-suggestions');
+    let debounceTimer = null;
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      // Tant qu'on retape, on masque le détail de l'ancienne ville sélectionnée (il faut
+      // reconfirmer via une suggestion avant de revoir les offres / pouvoir enchérir).
+      document.getElementById('ench-details').classList.add('hidden');
+      clearTimeout(debounceTimer);
+      if(q.length < 2){ suggBox.classList.add('hidden'); suggBox.innerHTML = ''; return; }
+      debounceTimer = setTimeout(async () => {
+        try{
+          const res = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux&boost=population&limit=8`);
+          const villesTrouvees = await res.json();
+          if(!Array.isArray(villesTrouvees) || !villesTrouvees.length){
+            suggBox.innerHTML = '<div style="padding:10px 14px; color:var(--texte-doux); font-size:14px;">Aucune ville trouvée.</div>';
             suggBox.classList.remove('hidden');
-            suggBox.querySelectorAll('.ench-ville-opt').forEach(opt => {
-              opt.addEventListener('click', () => {
-                encheresVilleActuelle = opt.dataset.ville;
-                suggBox.classList.add('hidden');
-                input.value = encheresVilleActuelle;
-                afficherDetailsVille();
-              });
-            });
-          }catch(e){
-            console.error(e);
-            suggBox.innerHTML = '<div style="padding:10px 14px; color:var(--rouge); font-size:14px;">Recherche indisponible, réessayez.</div>';
-            suggBox.classList.remove('hidden');
+            return;
           }
-        }, 300);
-      });
-    } else {
+          suggBox.innerHTML = villesTrouvees.map(v => `<div class="ench-ville-opt" data-ville="${v.nom}" style="padding:10px 14px; cursor:pointer; font-size:14px; border-bottom:1px solid var(--bordure);">${v.nom}${v.codesPostaux && v.codesPostaux[0] ? ' (' + v.codesPostaux[0] + ')' : ''}</div>`).join('');
+          suggBox.classList.remove('hidden');
+          suggBox.querySelectorAll('.ench-ville-opt').forEach(opt => {
+            opt.addEventListener('click', () => {
+              encheresVilleActuelle = opt.dataset.ville;
+              suggBox.classList.add('hidden');
+              input.value = encheresVilleActuelle;
+              updateVilleNote();
+              afficherDetailsVille();
+            });
+          });
+        }catch(e){
+          console.error(e);
+          suggBox.innerHTML = '<div style="padding:10px 14px; color:var(--rouge); font-size:14px;">Recherche indisponible, réessayez.</div>';
+          suggBox.classList.remove('hidden');
+        }
+      }, 300);
+    });
+
+    if(encheresVilleActuelle){
       await afficherDetailsVille();
     }
 
@@ -1803,6 +1821,17 @@
         paypalPayerName: payerName || null
       });
 
+      // Si l'artisan avait une offre active dans une AUTRE ville, on la retire automatiquement :
+      // une seule ville active à la fois, mais il peut librement en changer.
+      const mySnapAutres = await getDocs(query(collection(db, "encheres"), where("artisanUid", "==", currentUser.uid)));
+      const retraitsPromises = mySnapAutres.docs
+        .filter(s => {
+          const d = s.data();
+          return d.status === 'validee' && d.ville !== encheresVilleActuelle && d.expireAt && d.expireAt > now;
+        })
+        .map(s => updateDoc(doc(db, "encheres", s.id), { status: 'retiree', reviewedAt: Date.now() }));
+      await Promise.all(retraitsPromises);
+
       // Classement au moment de l'enchère (offre qu'on vient de payer incluse).
       const snap = await getDocs(query(collection(db, "encheres"), where("ville", "==", encheresVilleActuelle)));
       const all = snap.docs.map(s => s.data());
@@ -1860,7 +1889,7 @@
       }
 
       showMsg(`Paiement reçu, offre activée ! Vous êtes ${position}${position === 1 ? 're' : 'e'} à ${encheresVilleActuelle}. Confirmation envoyée par e-mail et par message.`, "ok");
-      encheresVilleVerrouillee = true;
+      encheresVilleActiveInitiale = encheresVilleActuelle;
       encheresVilleExpireAt = expireAt;
       await renderEncheresModal();
     }catch(e){
