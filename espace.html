@@ -1588,8 +1588,9 @@
           <div id="ench-list" style="margin-top:8px;"><div class="empty">Chargement...</div></div>
           <label style="margin-top:16px;">Placer / augmenter mon offre (€)</label>
           <input type="number" class="no-spin" inputmode="numeric" id="ench-montant-input" min="1" step="1" placeholder="Tapez le montant de votre choix, ex : 25">
-          <div class="item-sub" style="margin-top:6px;">Après envoi, Presta+ vous contactera pour le règlement ; votre position se met à jour dès validation.</div>
+          <div class="item-sub" style="margin-top:6px;">Le paiement se fait par carte bancaire ou compte PayPal. Une fois le paiement confirmé, votre offre est enregistrée ; Presta+ la valide ensuite pour l'activer.</div>
           <button class="primary" id="btn-submit-ench" style="margin-top:14px;">Enchérir</button>
+          <div id="paypal-button-container" class="hidden" style="margin-top:14px;"></div>
           <div id="ench-pending-note" class="item-sub" style="margin-top:10px;"></div>
         </div>
       </div>`;
@@ -1652,34 +1653,93 @@
         return;
       }
       const btn = document.getElementById('btn-submit-ench');
-      btn.disabled = true; btn.textContent = "Envoi en cours...";
+      btn.disabled = true; btn.textContent = "Chargement du paiement...";
       try{
-        const artisanName = currentData.denominationSociale || ((currentData.prenom||'') + ' ' + (currentData.nom||'')).trim();
-        await addDoc(collection(db, "encheres"), {
-          artisanUid: currentUser.uid, artisanName, ville: encheresVilleActuelle,
-          montant, status: 'en_attente', createdAt: serverTimestamp()
-        });
-        if(window.emailjs){
-          const lienAdmin = window.location.origin + window.location.pathname.replace('espace.html', '') + 'admin.html';
-          emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-            email_artisan: "prestaplus.officiel@gmail.com",
-            metier: "NOUVELLE ENCHÈRE VILLE",
-            ville: encheresVilleActuelle,
-            description: `Un artisan propose ${montant} € pour être mis en avant à ${encheresVilleActuelle}. Ouvrez la console admin, onglet Enchères, pour valider après réception du paiement.`,
-            email_client: currentData.email || '',
-            lien_client: lienAdmin,
-            name: artisanName
-          }).catch((e) => console.error("Erreur notification enchère :", e));
-        }
-        showMsg("Offre envoyée, en attente de validation. Merci !", "ok");
-        encheresVilleVerrouillee = true;
-        await renderEncheresModal();
+        await loadPaypalSdk();
       }catch(e){
         console.error(e);
+        showMsg("Impossible de charger PayPal. Vérifiez votre connexion et réessayez.", "error");
         btn.disabled = false; btn.textContent = "Enchérir";
-        showMsg("Erreur lors de l'envoi : " + (e.message || e.code || "inconnue"), "error");
+        return;
       }
+      btn.classList.add('hidden');
+      const container = document.getElementById('paypal-button-container');
+      container.classList.remove('hidden');
+      container.innerHTML = '';
+      window.paypal.Buttons({
+        style: { layout: 'vertical', color: 'gold', label: 'pay' },
+        createOrder: (data, actions) => actions.order.create({
+          purchase_units: [{
+            amount: { value: montant.toString(), currency_code: 'EUR' },
+            description: `Presta+ — Enchère Ville à ${encheresVilleActuelle}`
+          }]
+        }),
+        onApprove: async (data, actions) => {
+          const details = await actions.order.capture();
+          await enregistrerEnchereApresPaiement(montant, details);
+        },
+        onError: (err) => {
+          console.error(err);
+          showMsg("Erreur lors du paiement PayPal.", "error");
+        },
+        onCancel: () => {
+          container.classList.add('hidden');
+          container.innerHTML = '';
+          btn.classList.remove('hidden');
+          btn.disabled = false; btn.textContent = "Enchérir";
+        }
+      }).render('#paypal-button-container');
     });
+  }
+
+  // Client ID PayPal (clé publique, sans risque à exposer côté navigateur — jamais la clé secrète).
+  const PAYPAL_CLIENT_ID = "AS6iZlXP-8CRVF199FL11uFs7Bbl8YZj2dzCB-r398imOGmU9W2YAZe1KyRCW7qSF9GjqIk7HWYkujnY";
+  let paypalSdkLoaded = false;
+  function loadPaypalSdk(){
+    return new Promise((resolve, reject) => {
+      if(paypalSdkLoaded && window.paypal){ resolve(); return; }
+      const s = document.createElement('script');
+      s.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}&currency=EUR&intent=capture`;
+      s.onload = () => { paypalSdkLoaded = true; resolve(); };
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  // Enregistre l'enchère une fois le paiement PayPal confirmé (capturé). L'offre reste
+  // "en_attente" : Presta+ vérifie la transaction dans son tableau de bord PayPal avant
+  // de la valider dans la console admin, comme filet de sécurité supplémentaire.
+  async function enregistrerEnchereApresPaiement(montant, paypalDetails){
+    try{
+      const artisanName = currentData.denominationSociale || ((currentData.prenom||'') + ' ' + (currentData.nom||'')).trim();
+      const payer = paypalDetails.payer || {};
+      const payerName = payer.name ? `${payer.name.given_name||''} ${payer.name.surname||''}`.trim() : null;
+      await addDoc(collection(db, "encheres"), {
+        artisanUid: currentUser.uid, artisanName, ville: encheresVilleActuelle,
+        montant, status: 'en_attente', createdAt: serverTimestamp(),
+        paypalOrderId: paypalDetails.id || null,
+        paypalPayerEmail: payer.email_address || null,
+        paypalPayerName: payerName || null
+      });
+      if(window.emailjs){
+        const lienAdmin = window.location.origin + window.location.pathname.replace('espace.html', '') + 'admin.html';
+        emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+          email_artisan: "prestaplus.officiel@gmail.com",
+          metier: "NOUVELLE ENCHÈRE VILLE (payée via PayPal)",
+          ville: encheresVilleActuelle,
+          description: `Un artisan a payé ${montant} € via PayPal (commande ${paypalDetails.id || '—'}) pour être mis en avant à ${encheresVilleActuelle}. Vérifiez la transaction dans votre tableau de bord PayPal puis validez dans la console admin, onglet Enchères.`,
+          email_client: currentData.email || '',
+          lien_client: lienAdmin,
+          name: artisanName
+        }).catch((e) => console.error("Erreur notification enchère :", e));
+      }
+      showMsg("Paiement reçu, offre envoyée. En attente de validation par Presta+. Merci !", "ok");
+      encheresVilleVerrouillee = true;
+      await renderEncheresModal();
+    }catch(e){
+      console.error(e);
+      showMsg("Paiement effectué mais erreur d'enregistrement : " + (e.message || e.code || "inconnue") + ". Contactez le support.", "error");
+    }
   }
 
   // ---------- MUR DES ANNONCES (artisan) ----------

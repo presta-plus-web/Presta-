@@ -963,6 +963,7 @@
         el.innerHTML = `
           <div class="info">
             <div class="title">${e.artisanName || '—'} <span class="tag featured">${e.montant} € — ${e.ville}</span></div>
+            ${e.paypalOrderId ? `<div class="sub" style="margin-top:4px;">Payé via PayPal — commande ${e.paypalOrderId}${e.paypalPayerEmail ? ` (${e.paypalPayerEmail}${e.paypalPayerName ? ', ' + e.paypalPayerName : ''})` : ''}. Vérifiez la transaction dans votre tableau de bord PayPal avant de valider.</div>` : `<div class="sub" style="margin-top:4px;">Aucun paiement PayPal enregistré — vérifiez le règlement manuellement avant de valider.</div>`}
           </div>
           <div class="row-actions">
             <button class="btn-sm gold" data-action="valider">Valider</button>
