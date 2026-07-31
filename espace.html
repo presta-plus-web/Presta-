@@ -1574,39 +1574,40 @@
   }
 
   // ---------- ENCHÈRES VILLE (mise en avant payante) ----------
-  // Règle : un artisan ne peut avoir qu'une seule ville d'enchère active à la fois. La ville se
-  // choisit par recherche parmi les vraies communes de France (API officielle geo.api.gouv.fr),
-  // indépendamment de ses villes d'intervention. Le prix = montant par jour x nombre de jours
-  // choisis ; le paiement PayPal valide l'offre automatiquement (pas de validation manuelle).
-  // Important : l'artisan peut à tout moment choisir une AUTRE ville que celle où il a déjà une
-  // offre active — dans ce cas, payer la nouvelle offre retire automatiquement l'ancienne (une
-  // seule ville active à la fois, mais on peut en changer librement, pas de blocage définitif).
-  let encheresVilleActuelle = null;       // ville affichée / en cours de sélection dans le popup
-  let encheresVilleActiveInitiale = null; // ville où l'artisan a déjà une offre active (si existante)
-  let encheresVilleExpireAt = null;       // expiration de cette offre active
+  // Un artisan peut enchérir dans autant de villes qu'il veut, en même temps (pas de limite à une
+  // seule ville). La ville se choisit par recherche parmi les vraies communes de France (API
+  // officielle geo.api.gouv.fr), indépendamment de ses villes d'intervention. Le prix = montant
+  // par jour x nombre de jours choisis ; le paiement PayPal valide l'offre automatiquement.
+  let encheresVilleActuelle = null;   // ville en cours de sélection dans le popup
+  let encheresMesOffresActives = [];  // liste de toutes les offres actives de l'artisan (toutes villes)
 
   async function openEncheresVille(){
     const mySnap = await getDocs(query(collection(db, "encheres"), where("artisanUid", "==", currentUser.uid)));
     const now = Date.now();
-    const myActive = mySnap.docs.map(s => s.data())
+    encheresMesOffresActives = mySnap.docs.map(s => s.data())
       .filter(e => e.status === 'validee' && e.expireAt && e.expireAt > now)
-      .sort((a,b) => b.expireAt - a.expireAt)[0];
-    encheresVilleActiveInitiale = myActive ? myActive.ville : null;
-    encheresVilleExpireAt = myActive ? myActive.expireAt : null;
-    encheresVilleActuelle = encheresVilleActiveInitiale; // pré-rempli, mais modifiable
+      .sort((a,b) => a.ville.localeCompare(b.ville));
+    encheresVilleActuelle = null;
     await renderEncheresModal();
   }
 
   async function renderEncheresModal(){
     const root = document.getElementById('modal-root');
+    const mesOffresHtml = encheresMesOffresActives.length ? `
+      <div class="item-sub" style="margin-top:10px;">Vos offres actives (${encheresMesOffresActives.length}) :</div>
+      <div style="margin-top:6px;">${encheresMesOffresActives.map(e => {
+        const finStr = new Date(e.expireAt).toLocaleDateString('fr-FR');
+        return `<div class="item" style="padding:8px 12px; margin-bottom:6px;"><div class="item-title" style="margin:0; font-size:14px;">${e.ville} — ${e.montant} €/jour${e.montantTotal ? ` (total ${e.montantTotal} €)` : ''}</div><div class="item-sub" style="margin-top:2px;">Active jusqu'au ${finStr}</div></div>`;
+      }).join('')}</div>` : '';
     root.innerHTML = `
       <div class="modal-bg" id="ench-bg">
         <div class="modal">
           <button class="modal-close" id="ench-close">Fermer</button>
           <h2 style="font-size:18px; margin-top:6px;">Enchères Ville</h2>
-          <div class="item-sub">Choisissez une ville et un nombre de jours : plus votre offre est élevée, plus vous apparaissez en haut de la liste envoyée aux clients de cette ville, avec la mention "Top recommandation" pour le premier. Vous ne pouvez avoir qu'une seule ville active à la fois, mais vous pouvez en changer quand vous voulez en tapant une nouvelle ville ci-dessous.</div>
-          <label style="margin-top:10px;">Ville</label>
-          <input type="text" id="ench-ville-input" placeholder="Tapez le nom d'une ville de France..." autocomplete="off" value="${encheresVilleActuelle || ''}">
+          <div class="item-sub">Choisissez une ville et un nombre de jours : plus votre offre est élevée, plus vous apparaissez en haut de la liste envoyée aux clients de cette ville, avec la mention "Top recommandation" pour le premier. Vous pouvez enchérir dans autant de villes que vous voulez, en même temps.</div>
+          ${mesOffresHtml}
+          <label style="margin-top:14px;">Ville</label>
+          <input type="text" id="ench-ville-input" placeholder="Tapez le nom d'une ville de France..." autocomplete="off">
           <div id="ench-ville-suggestions" class="hidden" style="background:#fff; border:1px solid var(--bordure); border-radius:10px; margin-top:6px; max-height:220px; overflow-y:auto; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>
           <div id="ench-ville-note" class="item-sub" style="margin-top:8px;"></div>
           <div id="ench-details" class="hidden">
@@ -1630,16 +1631,14 @@
     function updateVilleNote(){
       const noteEl = document.getElementById('ench-ville-note');
       if(!noteEl) return;
-      const finStr = encheresVilleExpireAt ? new Date(encheresVilleExpireAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
-      if(!encheresVilleActiveInitiale){
+      const existante = encheresMesOffresActives.find(e => e.ville === encheresVilleActuelle);
+      if(!existante){
         noteEl.textContent = '';
-      } else if(encheresVilleActuelle === encheresVilleActiveInitiale){
-        noteEl.textContent = `Vous avez une offre active à ${encheresVilleActiveInitiale}, jusqu'au ${finStr}. Vous pouvez l'augmenter ci-dessous, ou taper une autre ville pour en changer.`;
       } else {
-        noteEl.innerHTML = `<b style="color:var(--rouge);">Attention :</b> payer une offre à ${encheresVilleActuelle} retirera automatiquement votre offre active à ${encheresVilleActiveInitiale}.`;
+        const finStr = new Date(existante.expireAt).toLocaleDateString('fr-FR');
+        noteEl.textContent = `Vous avez déjà une offre active à ${encheresVilleActuelle} (${existante.montant} €/jour, jusqu'au ${finStr}). Vous pouvez la remplacer par une offre plus élevée ci-dessous.`;
       }
     }
-    updateVilleNote();
 
     const input = document.getElementById('ench-ville-input');
     const suggBox = document.getElementById('ench-ville-suggestions');
@@ -1821,18 +1820,9 @@
         paypalPayerName: payerName || null
       });
 
-      // Si l'artisan avait une offre active dans une AUTRE ville, on la retire automatiquement :
-      // une seule ville active à la fois, mais il peut librement en changer.
-      const mySnapAutres = await getDocs(query(collection(db, "encheres"), where("artisanUid", "==", currentUser.uid)));
-      const retraitsPromises = mySnapAutres.docs
-        .filter(s => {
-          const d = s.data();
-          return d.status === 'validee' && d.ville !== encheresVilleActuelle && d.expireAt && d.expireAt > now;
-        })
-        .map(s => updateDoc(doc(db, "encheres", s.id), { status: 'retiree', reviewedAt: Date.now() }));
-      await Promise.all(retraitsPromises);
-
-      // Classement au moment de l'enchère (offre qu'on vient de payer incluse).
+      // Classement au moment de l'enchère (offre qu'on vient de payer incluse). Les autres offres
+      // actives de l'artisan, dans d'autres villes, ne sont pas touchées : il peut enchérir dans
+      // autant de villes qu'il veut en même temps.
       const snap = await getDocs(query(collection(db, "encheres"), where("ville", "==", encheresVilleActuelle)));
       const all = snap.docs.map(s => s.data());
       const actives = all.filter(e => e.status === 'validee' && e.expireAt && e.expireAt > now);
@@ -1889,8 +1879,12 @@
       }
 
       showMsg(`Paiement reçu, offre activée ! Vous êtes ${position}${position === 1 ? 're' : 'e'} à ${encheresVilleActuelle}. Confirmation envoyée par e-mail et par message.`, "ok");
-      encheresVilleActiveInitiale = encheresVilleActuelle;
-      encheresVilleExpireAt = expireAt;
+      // On recharge la liste des offres actives (toutes villes confondues) pour l'afficher à jour.
+      const mySnapMaj = await getDocs(query(collection(db, "encheres"), where("artisanUid", "==", currentUser.uid)));
+      encheresMesOffresActives = mySnapMaj.docs.map(s => s.data())
+        .filter(e => e.status === 'validee' && e.expireAt && e.expireAt > now)
+        .sort((a,b) => a.ville.localeCompare(b.ville));
+      encheresVilleActuelle = null;
       await renderEncheresModal();
     }catch(e){
       console.error(e);

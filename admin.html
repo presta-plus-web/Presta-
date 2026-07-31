@@ -971,8 +971,20 @@
         </div>
       </div>`;
 
-    // --- Classement actuel par ville ---
+    // --- Par artisan : chaque artisan peut avoir plusieurs villes actives en même temps ---
     const current = bestEncheresByArtisan().filter(matchesTerm);
+    const byArtisan = {};
+    current.forEach(e => { (byArtisan[e.artisanUid] = byArtisan[e.artisanUid] || []).push(e); });
+    Object.values(byArtisan).forEach(arr => arr.sort((a,b) => b.montant - a.montant));
+
+    html += `<h3 style="font-size:15px; color:var(--marine); margin-bottom:10px;">Par artisan (${Object.keys(byArtisan).length})</h3>`;
+    if(!Object.keys(byArtisan).length){
+      html += '<div class="empty">Aucune enchère active pour le moment.</div>';
+    } else {
+      html += '<div id="ench-artisan-box" style="margin-bottom:26px;"></div>';
+    }
+
+    // --- Classement actuel par ville ---
     const byVille = {};
     current.forEach(e => { (byVille[e.ville] = byVille[e.ville] || []).push(e); });
     Object.values(byVille).forEach(arr => arr.sort((a,b) => (b.montant - a.montant) || (a.t - b.t)));
@@ -985,6 +997,32 @@
     }
 
     box.innerHTML = html;
+
+    // Rendu du détail par artisan
+    if(Object.keys(byArtisan).length){
+      const artisanBox = document.getElementById('ench-artisan-box');
+      Object.values(byArtisan)
+        .sort((a, b) => b.length - a.length)
+        .forEach(offres => {
+          const total = offres.reduce((s, e) => s + (e.montantTotal != null ? e.montantTotal : e.montant), 0);
+          const el = document.createElement('div');
+          el.className = 'list-row';
+          el.style.flexDirection = 'column';
+          el.style.alignItems = 'stretch';
+          el.innerHTML = `
+            <div class="info">
+              <div class="title">${offres[0].artisanName || '—'} <span class="tag featured">${offres.length} ville${offres.length > 1 ? 's' : ''}</span></div>
+              <div class="sub" style="margin-top:2px;">${total} € engagés au total</div>
+            </div>
+            <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+              ${offres.map(e => {
+                const finStr = e.expireAt ? new Date(e.expireAt).toLocaleDateString('fr-FR') : '—';
+                return `<div class="sub">${e.ville} — ${e.montant} €/jour${e.montantTotal ? ` (total ${e.montantTotal} €)` : ''}, jusqu'au ${finStr}</div>`;
+              }).join('')}
+            </div>`;
+          artisanBox.appendChild(el);
+        });
+    }
 
     // Rendu du classement actuel
     if(Object.keys(byVille).length){
