@@ -716,13 +716,18 @@
     artisans.forEach(u => {
       const el = document.createElement('div');
       el.className = 'list-row';
+      const estCertifie = u.certificationStatus === 'certifie';
       el.innerHTML = `
         <div class="info">
           <div class="title">${u.prenom||''} ${u.nom||''}
             ${u.featuredPosition ? `<span class="tag featured">${u.featuredPosition}${u.featuredPosition===1?'re':'e'} position</span>` : ''}
+            ${estCertifie ? `<span class="tag status-active">Certifié</span>` : ''}
           </div>
           <div class="sub">${(u.villesIntervention||[u.ville]).filter(Boolean).join(', ')}</div>
-          <select data-role="position-select" style="margin-top:8px; max-width:220px;">${positionOptions}</select>
+          <div style="display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;">
+            <select data-role="position-select" style="max-width:220px;">${positionOptions}</select>
+            <button class="btn-sm ${estCertifie ? 'danger' : 'gold'}" data-action="toggle-cert">${estCertifie ? 'Retirer la certification' : 'Activer la certification'}</button>
+          </div>
         </div>`;
       el.querySelector('[data-role="position-select"]').value = u.featuredPosition || '';
       el.querySelector('[data-role="position-select"]').addEventListener('change', async (e) => {
@@ -732,6 +737,17 @@
           : { featured: false, featuredPosition: null };
         await updateDoc(doc(db, "users", u.uid), payload);
         u.featured = !!val; u.featuredPosition = val;
+        renderFeatured();
+      });
+      el.querySelector('[data-action="toggle-cert"]').addEventListener('click', async () => {
+        // Activation/retrait direct de la pastille de certification, sans passer par un dossier
+        // K-bis + assurance RC (raccourci pratique, en plus du circuit complet dans l'onglet Certifications).
+        const nouveauStatut = estCertifie ? 'aucune' : 'certifie';
+        if(!estCertifie){
+          if(!confirm(`Activer la pastille de certification pour ${u.prenom||''} ${u.nom||''} sans dossier (K-bis / assurance) ? Vous pourrez la retirer à tout moment.`)) return;
+        }
+        await updateDoc(doc(db, "users", u.uid), { certificationStatus: nouveauStatut });
+        u.certificationStatus = nouveauStatut;
         renderFeatured();
       });
       box.appendChild(el);
@@ -908,10 +924,16 @@
   }
 
   // ---------- ENCHÈRES VILLE ----------
+  // Les paiements sont validés automatiquement côté artisan (PayPal) : chaque document "encheres"
+  // représente un paiement déjà encaissé. La console affiche juste l'information et des
+  // statistiques ; il n'y a plus de bouton "Valider" à actionner ici.
   function bestEncheresByArtisan(){
     // Pour chaque (artisan, ville), on ne garde que l'enchère validée la plus récente = montant courant.
+    // Une enchère sans expireAt (ancien format) est considérée toujours active ; sinon elle doit
+    // ne pas encore avoir expiré.
+    const now = Date.now();
     const best = {};
-    allEncheres.filter(e => e.status === 'validee').forEach(e => {
+    allEncheres.filter(e => e.status === 'validee' && (!e.expireAt || e.expireAt > now)).forEach(e => {
       const key = e.artisanUid + '|' + e.ville;
       const t = e.createdAt?.seconds || 0;
       if(!best[key] || t > best[key].t) best[key] = { ...e, t };
@@ -923,9 +945,9 @@
     const term = document.getElementById('encheres-search').value.trim().toLowerCase();
     const box = document.getElementById('encheres-list');
     const badge = document.getElementById('encheres-badge');
-    const pending = allEncheres.filter(e => e.status === 'en_attente');
-    if(pending.length){ badge.textContent = pending.length; badge.classList.remove('hidden'); }
-    else { badge.classList.add('hidden'); }
+    // Le badge n'a plus de sens pour une "validation en attente" (tout est automatique désormais) ;
+    // on le laisse masqué.
+    badge.classList.add('hidden');
 
     const matchesTerm = (e) => {
       if(!term) return true;
@@ -934,10 +956,20 @@
 
     let html = '';
 
-    // --- Demandes en attente de validation ---
-    const pendingFiltered = pending.filter(matchesTerm);
-    html += `<h3 style="font-size:15px; color:var(--marine); margin-bottom:10px;">Demandes en attente (${pendingFiltered.length})</h3>`;
-    html += pendingFiltered.length ? '<div id="ench-pending-box"></div>' : '<div class="empty">Aucune demande en attente.</div>';
+    // --- Statistiques globales (toutes enchères confondues, chaque document = un paiement encaissé) ---
+    const nbArtisans = new Set(allEncheres.map(e => e.artisanUid)).size;
+    const montantTotal = allEncheres.reduce((sum, e) => sum + (e.montantTotal != null ? e.montantTotal : (e.montant || 0)), 0);
+    html += `
+      <div style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:22px;">
+        <div class="stat-card" style="flex:1; min-width:160px;">
+          <div class="num">${nbArtisans}</div>
+          <div class="lbl">Artisan${nbArtisans > 1 ? 's' : ''} ayant enchéri</div>
+        </div>
+        <div class="stat-card" style="flex:1; min-width:160px;">
+          <div class="num">${montantTotal} €</div>
+          <div class="lbl">Montant total encaissé</div>
+        </div>
+      </div>`;
 
     // --- Classement actuel par ville ---
     const current = bestEncheresByArtisan().filter(matchesTerm);
@@ -945,7 +977,7 @@
     current.forEach(e => { (byVille[e.ville] = byVille[e.ville] || []).push(e); });
     Object.values(byVille).forEach(arr => arr.sort((a,b) => (b.montant - a.montant) || (a.t - b.t)));
 
-    html += `<h3 style="font-size:15px; color:var(--marine); margin:26px 0 10px;">Classement actuel par ville</h3>`;
+    html += `<h3 style="font-size:15px; color:var(--marine); margin-bottom:10px;">Classement actuel par ville</h3>`;
     if(!Object.keys(byVille).length){
       html += '<div class="empty">Aucune enchère active pour le moment.</div>';
     } else {
@@ -953,36 +985,6 @@
     }
 
     box.innerHTML = html;
-
-    // Rendu des demandes en attente
-    if(pendingFiltered.length){
-      const pendingBox = document.getElementById('ench-pending-box');
-      pendingFiltered.forEach(e => {
-        const el = document.createElement('div');
-        el.className = 'list-row';
-        el.innerHTML = `
-          <div class="info">
-            <div class="title">${e.artisanName || '—'} <span class="tag featured">${e.montant} € — ${e.ville}</span></div>
-            ${e.paypalOrderId ? `<div class="sub" style="margin-top:4px;">Payé via PayPal — commande ${e.paypalOrderId}${e.paypalPayerEmail ? ` (${e.paypalPayerEmail}${e.paypalPayerName ? ', ' + e.paypalPayerName : ''})` : ''}. Vérifiez la transaction dans votre tableau de bord PayPal avant de valider.</div>` : `<div class="sub" style="margin-top:4px;">Aucun paiement PayPal enregistré — vérifiez le règlement manuellement avant de valider.</div>`}
-          </div>
-          <div class="row-actions">
-            <button class="btn-sm gold" data-action="valider">Valider</button>
-            <button class="btn-sm danger" data-action="refuser">Refuser</button>
-          </div>`;
-        el.querySelector('[data-action="valider"]').addEventListener('click', async () => {
-          await updateDoc(doc(db, "encheres", e.id), { status: 'validee', reviewedAt: Date.now() });
-          e.status = 'validee';
-          renderEncheres();
-        });
-        el.querySelector('[data-action="refuser"]').addEventListener('click', async () => {
-          if(!confirm(`Refuser l'enchère de ${e.artisanName || 'cet artisan'} (${e.montant} € — ${e.ville}) ?`)) return;
-          await updateDoc(doc(db, "encheres", e.id), { status: 'refusee', reviewedAt: Date.now() });
-          e.status = 'refusee';
-          renderEncheres();
-        });
-        pendingBox.appendChild(el);
-      });
-    }
 
     // Rendu du classement actuel
     if(Object.keys(byVille).length){
@@ -993,11 +995,13 @@
         header.textContent = ville;
         currentBox.appendChild(header);
         byVille[ville].forEach((e, i) => {
+          const finStr = e.expireAt ? new Date(e.expireAt).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }) : null;
           const el = document.createElement('div');
           el.className = 'list-row';
           el.innerHTML = `
             <div class="info">
-              <div class="title">${i === 0 ? '🏆 ' : ''}${e.artisanName || '—'} <span class="tag featured">${e.montant} €</span>${i === 0 ? '<span class="tag status-active">Top recommandation</span>' : ''}</div>
+              <div class="title">${i === 0 ? '🏆 ' : ''}${e.artisanName || '—'} <span class="tag featured">${e.montant} €/jour${e.montantTotal ? ` — total ${e.montantTotal} €` : ''}</span>${i === 0 ? '<span class="tag status-active">Top recommandation</span>' : ''}</div>
+              <div class="sub" style="margin-top:4px;">${e.reference ? `Réf. ${e.reference} — ` : ''}${finStr ? `Active jusqu'au ${finStr}` : 'Sans expiration (ancienne offre)'}${e.paypalOrderId ? ` — payé via PayPal (commande ${e.paypalOrderId})` : ''}</div>
             </div>
             <div class="row-actions">
               <button class="btn-sm warn" data-action="retirer">Retirer</button>
