@@ -76,6 +76,11 @@
   .horaire-jour-times{display:flex; align-items:center; gap:6px; margin-left:auto; font-size:13px; color:var(--texte-doux);}
   .horaire-jour-times input[type="time"]{width:88px; padding:6px 8px; border:1px solid var(--bordure); border-radius:6px; font-size:13px; font-family:'Inter',sans-serif;}
   .horaire-jour-fermee{margin-left:auto; font-size:13px; color:var(--texte-doux);}
+  /* Note libre artisan (tarifs, infos...) avec photos en miniature */
+  .note-photos-grid{display:flex; flex-wrap:wrap; gap:8px;}
+  .note-photo-thumb{position:relative; width:72px; height:72px; border-radius:8px; overflow:hidden; cursor:pointer; flex-shrink:0;}
+  .note-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .note-photo-remove{position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(16,29,44,0.7); color:#fff; border:none; font-size:12px; line-height:20px; cursor:pointer; padding:0;}
   h2{font-family:'Poppins',sans-serif; font-size:16px; color:var(--marine); margin-bottom:10px;}
   label{display:block; font-size:13px; font-weight:600; color:var(--marine); margin:12px 0 6px;}
   label:first-of-type{margin-top:0;}
@@ -107,16 +112,14 @@
   #msg.error{display:block; background:#FCE9E9; color:#B23434; border:1px solid var(--rouge);}
   #msg.ok{display:block; background:#E7F6EC; color:#1F7A44; border:1px solid var(--vert);}
   .hidden{display:none !important;}
-  .modal-bg{position:fixed; inset:0; background:rgba(16,29,44,0.5); display:flex; align-items:flex-end; justify-content:center; z-index:2000;}
-  .modal{background:#fff; border-radius:16px 16px 0 0; padding:22px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto;}
-  /* Sur ordinateur, toutes les fenêtres popup (fiches, avis, enchères, etc.) s'ouvrent centrées à
-     l'écran plutôt qu'en bulle collée en bas — seul le menu latéral (panneau qui glisse depuis la
-     droite) garde son propre style. */
-  @media (min-width: 760px){
-    .modal-bg{ align-items:center; }
-    .modal-bg .modal{ border-radius:16px; }
-    .modal-bg#menu-bg{ align-items:stretch; }
-  }
+  /* Toutes les fenêtres popup (fiches, avis, enchères, etc.) s'ouvrent centrées à l'écran, sur
+     ordinateur comme sur téléphone, entièrement dépliées (pas de tiroir coulissant tronqué en
+     bas). Si le contenu dépasse la hauteur de l'écran, c'est tout le fond (.modal-bg) qui défile,
+     pas une mini-zone interne — donc rien n'est jamais "noyé" ou coupé (ex : boutons PayPal en bas
+     d'un formulaire). Seul le menu latéral (qui glisse depuis la droite) garde son propre style via
+     son style inline dédié.  */
+  .modal-bg{position:fixed; inset:0; background:rgba(16,29,44,0.5); display:flex; align-items:center; justify-content:center; z-index:2000; overflow-y:auto; padding:24px 14px;}
+  .modal{background:#fff; border-radius:16px; padding:22px; width:100%; max-width:480px; margin:auto;}
   .modal-close{background:none; border:none; color:var(--texte-doux); font-size:14px; font-weight:600; float:right; cursor:pointer;}
   .photo-zoom-bg{position:fixed; inset:0; background:rgba(10,16,24,0.9); display:flex; align-items:center; justify-content:center; z-index:2500; padding:24px;}
   .photo-zoom-bg img{max-width:100%; max-height:100%; border-radius:10px; object-fit:contain; display:block;}
@@ -201,7 +204,8 @@
   .rating-sub{font-size:12px; color:var(--texte-doux); margin-left:4px;}
   .star-picker{font-size:26px; letter-spacing:4px; color:#D8DCE0; cursor:pointer;}
   .star-picker span.picked{color:var(--or);}
-  .crop-frame{width:260px; height:260px; border-radius:50%; overflow:hidden; margin:14px auto 0; position:relative; background:#000; touch-action:none; cursor:grab;}
+  .crop-frame{width:260px; height:260px; border-radius:50%; overflow:hidden; margin:14px auto 0; position:relative; background:#2a2f36; touch-action:none; cursor:grab;}
+  .crop-frame.square{border-radius:14px;}
   .crop-frame img{position:absolute; top:0; left:0; user-select:none; -webkit-user-drag:none;}
   .locate-row{display:flex; align-items:center; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--bordure);}
   .locate-sub{font-size:12px; color:var(--texte-doux); flex:1;}
@@ -325,13 +329,35 @@
     <label>Téléphone</label>
     <input type="text" id="a-telephone" placeholder="06 00 00 00 00">
     <label>Jours et horaires d'ouverture</label>
-    <div id="a-horaires-jours" class="horaires-jours"></div>
+    <div id="a-horaires-summary" class="item-sub" style="margin-top:2px;">Non renseigné</div>
+    <button type="button" class="secondary" id="btn-open-horaires" style="margin-top:8px;">Jour et horaire d'ouverture</button>
     <button class="primary" id="btn-save-artisan-profile">Enregistrer</button>
     <div class="locate-row">
       <div class="locate-sub" id="a-locate-status">Position non renseignée</div>
       <button class="icon-btn" id="btn-locate-artisan">Me localiser</button>
       <button class="icon-btn btn-remove-locate hidden" id="btn-remove-locate-artisan">Retirer</button>
     </div>
+  </div>
+
+  <div class="card" id="artisan-note-card">
+    <h2>Ma note</h2>
+    <div class="item-sub">Un texte libre affiché sur votre profil (tarifs, précisions, etc.), avec des photos si besoin.</div>
+    <div class="dispo-row" style="margin-top:12px; padding-top:12px;">
+      <div>
+        <div class="dispo-label" style="font-size:14px;">Visible sur mon profil</div>
+        <div class="dispo-sub">Les clients pourront la voir</div>
+      </div>
+      <button class="toggle" id="note-visible-toggle"><span class="dot"></span></button>
+    </div>
+    <label>Titre (en-tête)</label>
+    <input type="text" id="a-note-titre" placeholder="Ex : Tarification">
+    <label>Texte</label>
+    <textarea id="a-note-texte" placeholder="Votre texte libre (les liens que vous tapez seront cliquables)..." style="min-height:90px;"></textarea>
+    <label>Photos</label>
+    <div id="a-note-photos" class="note-photos-grid"></div>
+    <input type="file" id="a-note-photo-input" accept="image/*" class="hidden">
+    <button type="button" class="icon-btn" id="btn-add-note-photo" style="margin-top:8px;">+ Ajouter une photo</button>
+    <button class="primary" id="btn-save-note" style="margin-top:14px;">Enregistrer la note</button>
   </div>
 
   <div class="card" id="artisan-cert-card">
@@ -457,20 +483,45 @@
     box.appendChild(addChip);
   }
 
-  // ---------- Sélecteur journalier des horaires d'ouverture (artisan) ----------
+  // ---------- Sélecteur journalier des horaires d'ouverture (artisan), dans un popup ----------
   const JOURS_SEMAINE = [
     { key: 'lun', label: 'Lun' }, { key: 'mar', label: 'Mar' }, { key: 'mer', label: 'Mer' },
     { key: 'jeu', label: 'Jeu' }, { key: 'ven', label: 'Ven' }, { key: 'sam', label: 'Sam' }, { key: 'dim', label: 'Dim' }
   ];
   let horairesJoursState = {};
-  function renderHorairesJours(existing){
+  function initHorairesJoursState(existing){
     // existing = objet structuré { lun: {ouvert:true, debut:'08:00', fin:'18:00'}, ... } déjà enregistré, ou vide.
     horairesJoursState = {};
     JOURS_SEMAINE.forEach(j => {
       const d = (existing && existing[j.key]) || {};
       horairesJoursState[j.key] = { ouvert: d.ouvert !== undefined ? d.ouvert : (j.key !== 'dim'), debut: d.debut || '08:00', fin: d.fin || '18:00' };
     });
+  }
+  function updateHorairesSummary(){
+    const el = document.getElementById('a-horaires-summary');
+    if(!el) return;
+    const resume = getHorairesJoursResume();
+    el.textContent = resume ? resume.split('\n').join(' · ') : 'Non renseigné';
+  }
+  function openHorairesModal(){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="horaires-bg">
+        <div class="modal">
+          <button class="modal-close" id="horaires-close">Fermer</button>
+          <h2 style="font-size:18px; margin-top:6px;">Jour et horaire d'ouverture</h2>
+          <div class="item-sub" style="margin-top:6px;">Activez les jours où vous travaillez et indiquez vos horaires.</div>
+          <div id="a-horaires-jours" class="horaires-jours" style="margin-top:12px;"></div>
+          <div class="item-sub" style="margin-top:12px;">N'oubliez pas de cliquer sur "Enregistrer" sur votre profil après avoir fermé cette fenêtre.</div>
+        </div>
+      </div>`;
+    document.getElementById('horaires-close').addEventListener('click', () => { root.innerHTML = ''; updateHorairesSummary(); });
+    document.getElementById('horaires-bg').addEventListener('click', (e) => { if(e.target.id === 'horaires-bg'){ root.innerHTML = ''; updateHorairesSummary(); } });
+    renderHorairesJoursDOM();
+  }
+  function renderHorairesJoursDOM(){
     const box = document.getElementById('a-horaires-jours');
+    if(!box) return;
     box.innerHTML = JOURS_SEMAINE.map(j => {
       const s = horairesJoursState[j.key];
       return `
@@ -486,7 +537,7 @@
       const jour = row.dataset.jour;
       row.querySelector('[data-role="toggle"]').addEventListener('click', () => {
         horairesJoursState[jour].ouvert = !horairesJoursState[jour].ouvert;
-        renderHorairesJours(horairesJoursState);
+        renderHorairesJoursDOM();
       });
       const debutInput = row.querySelector('[data-role="debut"]');
       const finInput = row.querySelector('[data-role="fin"]');
@@ -554,6 +605,7 @@
     // d'annonces restent visibles.
     document.getElementById('artisan-cert-card').classList.toggle('hidden', previewMode);
     document.getElementById('artisan-reviews-card').classList.toggle('hidden', previewMode);
+    document.getElementById('artisan-note-card').classList.toggle('hidden', previewMode);
 
     if(isArtisanRole) { loadAdsWall(); document.getElementById('my-reviews-summary').innerHTML = renderStars(currentData.noteMoyenne || 0, currentData.nbAvis || 0); }
     else { loadArtisansList(); loadMyAds(); }
@@ -596,7 +648,10 @@
       document.getElementById('a-villes').value = (currentData.villesIntervention || []).join(', ');
       document.getElementById('a-adresse').value = currentData.adresse || '';
       document.getElementById('a-telephone').value = currentData.telephone || '';
-      renderHorairesJours(currentData.horairesJours || null);
+      initHorairesJoursState(currentData.horairesJours || null);
+      updateHorairesSummary();
+      document.getElementById('btn-open-horaires').addEventListener('click', openHorairesModal);
+      setupNoteCard();
       if(currentData.lat){ document.getElementById('a-locate-status').textContent = "Position enregistrée ✓"; document.getElementById('btn-remove-locate-artisan').classList.remove('hidden'); }
       renderCertificationCard();
       document.getElementById('btn-open-encheres').addEventListener('click', openEncheresVille);
@@ -841,16 +896,20 @@
   }
 
   function openCropModal(srcDataUrl, storageKey, img, initialsBox){
+    // La forme du cadre de recadrage suit la forme réelle de la miniature : carré arrondi pour les
+    // artisans, rond pour les clients — sinon le rendu final ne correspond pas à ce qu'on a réglé.
+    const estCarre = currentData.role === 'artisan';
     const root = document.getElementById('modal-root');
     root.innerHTML = `
       <div class="modal-bg" id="crop-bg">
         <div class="modal">
           <button class="modal-close" id="crop-close">Annuler</button>
           <h2 style="font-size:17px; margin-top:6px;">Ajuster la photo</h2>
-          <div class="crop-frame" id="crop-frame">
+          <div class="crop-frame${estCarre ? ' square' : ''}" id="crop-frame">
             <img id="crop-img" src="${srcDataUrl}" draggable="false">
           </div>
-          <input type="range" id="crop-zoom" min="1" max="3" step="0.01" value="1" style="width:100%; margin-top:14px;">
+          <div class="item-sub" style="text-align:center; margin-top:10px;">Faites glisser la photo pour la repositionner. Le curseur permet aussi de reculer pour voir plus de marge autour.</div>
+          <input type="range" id="crop-zoom" min="0.5" max="3" step="0.01" value="1" style="width:100%; margin-top:10px;">
           <button class="primary" id="crop-confirm">Valider la photo</button>
         </div>
       </div>`;
@@ -879,11 +938,13 @@
 
     zoomSlider.addEventListener('input', () => { scale = parseFloat(zoomSlider.value); clampOffset(); applyTransform(); });
 
+    // Permet de dézoomer sous la taille de remplissage ("marge de recul") : si l'image devient plus
+    // petite que le cadre, on la centre au lieu de la coller dans un coin.
     function clampOffset(){
       const s = baseScale * scale;
       const w = natW*s, h = natH*s;
-      offX = Math.min(0, Math.max(FRAME - w, offX));
-      offY = Math.min(0, Math.max(FRAME - h, offY));
+      offX = w <= FRAME ? (FRAME - w) / 2 : Math.min(0, Math.max(FRAME - w, offX));
+      offY = h <= FRAME ? (FRAME - h) / 2 : Math.min(0, Math.max(FRAME - h, offY));
     }
 
     let dragging = false, startX = 0, startY = 0;
@@ -927,6 +988,81 @@
     });
   }
 
+
+  // ---------- Note libre artisan (visible sur le profil, avec photos en miniature) ----------
+  let notePhotosState = [];
+  function initNoteState(){
+    notePhotosState = (currentData.notePhotos || []).slice();
+  }
+  function renderNotePhotos(){
+    const box = document.getElementById('a-note-photos');
+    if(!box) return;
+    box.innerHTML = notePhotosState.map((url, i) => `
+      <div class="note-photo-thumb" data-idx="${i}">
+        <img src="${url}">
+        <button type="button" class="note-photo-remove" data-role="remove" data-idx="${i}">✕</button>
+      </div>`).join('');
+    box.querySelectorAll('.note-photo-thumb img').forEach((img, i) => {
+      img.addEventListener('click', () => openPhotoZoom(notePhotosState[i]));
+    });
+    box.querySelectorAll('[data-role="remove"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const i = parseInt(btn.dataset.idx, 10);
+        notePhotosState.splice(i, 1);
+        renderNotePhotos();
+      });
+    });
+  }
+  function setupNoteCard(){
+    initNoteState();
+    document.getElementById('a-note-titre').value = currentData.noteTitre || '';
+    document.getElementById('a-note-texte').value = currentData.noteTexte || '';
+    renderNotePhotos();
+    const toggle = document.getElementById('note-visible-toggle');
+    let visible = currentData.noteVisible === true;
+    toggle.classList.toggle('on', visible);
+    toggle.addEventListener('click', () => { visible = !visible; toggle.classList.toggle('on', visible); });
+
+    document.getElementById('btn-add-note-photo').addEventListener('click', () => document.getElementById('a-note-photo-input').click());
+    document.getElementById('a-note-photo-input').addEventListener('change', async () => {
+      const file = document.getElementById('a-note-photo-input').files[0];
+      if(!file) return;
+      try{
+        const dataUrl = await resizeImageToDataUrl(file, 1000, 0.72);
+        notePhotosState.push(dataUrl);
+        renderNotePhotos();
+      }catch(e){ showMsg("Impossible de charger cette photo.", "error"); }
+      document.getElementById('a-note-photo-input').value = '';
+    });
+
+    document.getElementById('btn-save-note').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const noteTitre = document.getElementById('a-note-titre').value.trim();
+      const noteTexte = document.getElementById('a-note-texte').value.trim();
+      const noteVisible = toggle.classList.contains('on');
+      try{
+        await updateDoc(doc(db, "users", currentUser.uid), { noteTitre, noteTexte, noteVisible, notePhotos: notePhotosState });
+        currentData.noteTitre = noteTitre; currentData.noteTexte = noteTexte; currentData.noteVisible = noteVisible; currentData.notePhotos = notePhotosState.slice();
+        flashSaved(btn);
+      }catch(err){
+        showMsg("Échec de l'enregistrement : " + (err.message || err.code || "erreur inconnue"), "error");
+      }
+    });
+  }
+
+  // Échappe le HTML puis transforme les URL tapées en liens cliquables (utilisé pour la note libre
+  // de l'artisan, affichée telle quelle côté client).
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function linkifyText(str){
+    const escaped = escapeHtml(str);
+    return escaped.replace(/((https?:\/\/|www\.)[^\s<]+)/g, (match) => {
+      const href = match.startsWith('http') ? match : 'https://' + match;
+      return `<a href="${href}" target="_blank" rel="noopener" style="color:var(--marine); text-decoration:underline;">${match}</a>`;
+    });
+  }
 
   function setupDispoToggle(){
     const toggle = document.getElementById('dispo-toggle');
@@ -1377,6 +1513,12 @@
             <div>${d.email || '—'}</div>
           </div>
           ${d.horaires ? `<div style="margin-top:10px;"><div class="item-sub">Horaires</div><div style="white-space:pre-line;">${d.horaires}</div></div>` : ''}
+          ${d.noteVisible && (d.noteTitre || d.noteTexte) ? `
+          <div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--bordure);">
+            ${d.noteTitre ? `<div style="font-weight:700; color:var(--marine); margin-bottom:6px;">${escapeHtml(d.noteTitre)}</div>` : ''}
+            ${d.noteTexte ? `<div style="white-space:pre-line;">${linkifyText(d.noteTexte)}</div>` : ''}
+            ${(d.notePhotos && d.notePhotos.length) ? `<div class="note-photos-grid" style="margin-top:10px;" id="artisan-note-photos-view"></div>` : ''}
+          </div>` : ''}
           <button class="primary" id="btn-contact" style="margin-top:16px;">Contacter</button>
           <button class="icon-btn" id="btn-report-artisan" style="margin-top:8px; color:var(--rouge); border-color:var(--rouge);">Signaler cet artisan</button>
 
@@ -1398,6 +1540,13 @@
     document.getElementById('modal-bg').addEventListener('click', (e) => { if(e.target.id === 'modal-bg') root.innerHTML = ''; });
     document.getElementById('btn-contact').addEventListener('click', () => openContactOptions(d.uid, d.prenom + ' ' + d.nom, d.email, d.photo));
     document.getElementById('btn-report-artisan').addEventListener('click', () => openReportModal(d.uid, d.prenom + ' ' + d.nom));
+    const notePhotosView = document.getElementById('artisan-note-photos-view');
+    if(notePhotosView && d.notePhotos){
+      notePhotosView.innerHTML = d.notePhotos.map((p, i) => `<div class="note-photo-thumb" data-idx="${i}"><img src="${p}"></div>`).join('');
+      notePhotosView.querySelectorAll('.note-photo-thumb img').forEach((img, i) => {
+        img.addEventListener('click', () => openPhotoZoom(d.notePhotos[i]));
+      });
+    }
     if(d.photo){ document.getElementById('modal-avatar-zoom').addEventListener('click', () => openPhotoZoom(d.photo)); }
 
     let chosenStars = 0;
