@@ -156,6 +156,14 @@
     width:100%; background:var(--fond); border:1.5px solid var(--bordure); color:var(--texte);
     padding:12px 14px; border-radius:8px; font-size:15px; font-family:'Inter', sans-serif;
   }
+  .horaires-jours-admin{ border:1px solid var(--bordure); border-radius:10px; overflow:hidden; }
+  .horaire-jour-row-admin{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--bordure); }
+  .horaire-jour-row-admin:last-child{ border-bottom:none; }
+  .horaire-jour-nom-admin{ font-weight:600; font-size:14px; width:40px; flex-shrink:0; }
+  .note-photos-grid-admin{ display:flex; flex-wrap:wrap; gap:8px; }
+  .note-photo-thumb-admin{ position:relative; width:72px; height:72px; border-radius:8px; overflow:hidden; cursor:pointer; flex-shrink:0; }
+  .note-photo-thumb-admin img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .note-photo-remove-admin{ position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(16,29,44,0.7); color:#fff; border:none; font-size:12px; line-height:20px; cursor:pointer; padding:0; }
 </style>
 </head>
 <body>
@@ -1388,10 +1396,63 @@
     });
   }
 
-  // ----- ARTISAN : voir le rendu + parcourir/contacter les annonces disponibles, comme un vrai artisan -----
+  // Zoom photo dans un calque indépendant du modal-root (n'écrase pas le simulateur ouvert en dessous).
+  function openZoomOverlay(url){
+    const ov = document.createElement('div');
+    ov.className = 'modal-bg';
+    ov.style.zIndex = '3000';
+    ov.innerHTML = `<img src="${url}" style="max-width:92vw; max-height:92vh; border-radius:8px;">`;
+    ov.addEventListener('click', () => ov.remove());
+    document.body.appendChild(ov);
+  }
+
+  function escapeHtmlAdmin(str){
+    return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  const JOURS_SEMAINE_ADMIN = [
+    { key: 'lun', label: 'Lun' }, { key: 'mar', label: 'Mar' }, { key: 'mer', label: 'Mer' },
+    { key: 'jeu', label: 'Jeu' }, { key: 'ven', label: 'Ven' }, { key: 'sam', label: 'Sam' }, { key: 'dim', label: 'Dim' }
+  ];
+  function getHorairesJoursResumeAdmin(state){
+    const ouverts = JOURS_SEMAINE_ADMIN.filter(j => state[j.key].ouvert);
+    if(!ouverts.length) return '';
+    const lignes = [];
+    let i = 0;
+    while(i < ouverts.length){
+      let j = i;
+      const s0 = state[ouverts[i].key];
+      while(j + 1 < ouverts.length){
+        const sNext = state[ouverts[j+1].key];
+        const consecutif = JOURS_SEMAINE_ADMIN.findIndex(x => x.key === ouverts[j+1].key) === JOURS_SEMAINE_ADMIN.findIndex(x => x.key === ouverts[j].key) + 1;
+        if(consecutif && sNext.debut === s0.debut && sNext.fin === s0.fin) j++; else break;
+      }
+      const label = i === j ? ouverts[i].label : `${ouverts[i].label}-${ouverts[j].label}`;
+      lignes.push(`${label} : ${s0.debut.replace(':','h')}-${s0.fin.replace(':','h')}`);
+      i = j + 1;
+    }
+    return lignes.join(' · ');
+  }
+
+  // ----- ARTISAN : profil éditable complet (métiers, villes, horaires, note...) + rendu + annonces, comme un vrai artisan -----
   function renderArtisanSimulate(u){
     const root = document.getElementById('modal-root');
     const nomAffiche = u.denominationSociale || ((u.prenom||'') + ' ' + (u.nom||'')).trim() || 'Artisan';
+    const villesInitiales = (u.villesIntervention && u.villesIntervention.length) ? u.villesIntervention : (u.ville ? [u.ville] : []);
+    let disponible = u.disponible !== false;
+    let simPhotoDataUrl = u.photo || null;
+
+    // État local des horaires (jour par jour), initialisé depuis les données existantes ou par défaut.
+    const horairesState = {};
+    JOURS_SEMAINE_ADMIN.forEach(j => {
+      const d = (u.horairesJours && u.horairesJours[j.key]) || {};
+      horairesState[j.key] = { ouvert: d.ouvert !== undefined ? d.ouvert : (j.key !== 'dim'), debut: d.debut || '08:00', fin: d.fin || '18:00' };
+    });
+
+    // État local de la note (titre + texte + photos + visibilité).
+    let noteVisible = u.noteVisible === true;
+    let notePhotos = (u.notePhotos || []).slice();
+
     root.innerHTML = `
       <div class="modal-bg" id="sim-bg">
         <div class="modal-box" style="max-width:640px;">
@@ -1399,7 +1460,55 @@
           <h2>${nomAffiche} <span class="tag role-artisan">Artisan</span></h2>
           <div class="sub">${(u.metiers||[]).join(', ') || 'métier non renseigné'} — ${u.ville || 'ville non renseignée'}</div>
           <div style="margin-top:8px;">${renderStarsSimple(u.noteMoyenne, u.nbAvis)}</div>
-          <div class="sub" style="margin-top:8px; color:var(--texte-doux);">Ceci simule ce que ferait réellement cet artisan dans l'application.</div>
+          <div class="sub" style="margin-top:8px; color:var(--texte-doux);">Ceci simule ce que ferait réellement cet artisan dans l'application : modifie son profil, ses horaires, sa note, comme s'il était connecté.</div>
+
+          <div class="sim-section">
+            <h3>Mon profil (en tant que cet artisan)</h3>
+            <label>Dénomination sociale</label>
+            <input type="text" id="sim-a-denom" value="${escapeHtmlAdmin(nomAffiche)}">
+            <label>Métiers (séparés par une virgule)</label>
+            <input type="text" id="sim-a-metiers" value="${escapeHtmlAdmin((u.metiers||[]).join(', '))}">
+            <label>Villes d'intervention (séparées par une virgule)</label>
+            <input type="text" id="sim-a-villes" value="${escapeHtmlAdmin(villesInitiales.join(', '))}">
+            <label>Téléphone</label>
+            <input type="text" id="sim-a-tel" value="${escapeHtmlAdmin(u.telephone||'')}">
+            <label>E-mail</label>
+            <input type="email" id="sim-a-email" value="${escapeHtmlAdmin(u.email||'')}">
+            <label>Photo</label>
+            <input type="file" id="sim-a-photo" accept="image/*">
+            <img id="sim-a-photo-preview" src="${simPhotoDataUrl||''}" class="${simPhotoDataUrl?'':'hidden'}" style="width:90px; height:90px; object-fit:cover; border-radius:50%; margin-top:8px; display:block; cursor:${simPhotoDataUrl?'zoom-in':'default'};">
+            <div class="checkbox-row" style="margin-top:14px;">
+              <button class="btn-sm ${disponible ? 'gold' : ''}" id="btn-sim-a-dispo" type="button">${disponible ? 'Disponible ✓' : 'Indisponible'}</button>
+              <span class="sub">Cliquez pour basculer sa disponibilité</span>
+            </div>
+            <button class="btn-sm gold" id="btn-sim-save-artisan-profile" style="margin-top:14px;">Enregistrer le profil</button>
+            <div id="sim-a-profile-msg" class="sub" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="sim-section">
+            <h3>Jours et horaires d'ouverture</h3>
+            <div id="sim-a-horaires-jours" class="horaires-jours-admin"></div>
+            <button class="btn-sm gold" id="btn-sim-save-horaires" style="margin-top:12px;">Enregistrer les horaires</button>
+            <div id="sim-a-horaires-msg" class="sub" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="sim-section">
+            <h3>Ma note</h3>
+            <div class="checkbox-row">
+              <button class="btn-sm ${noteVisible ? 'gold' : ''}" id="btn-sim-a-note-visible" type="button">${noteVisible ? 'Visible sur le profil ✓' : 'Masquée'}</button>
+              <span class="sub">Cliquez pour basculer la visibilité côté client</span>
+            </div>
+            <label style="margin-top:14px;">Titre (en-tête)</label>
+            <input type="text" id="sim-a-note-titre" value="${escapeHtmlAdmin(u.noteTitre||'')}" placeholder="Ex : Tarification">
+            <label>Texte</label>
+            <textarea class="admin-textarea" id="sim-a-note-texte" placeholder="Texte libre (les liens seront cliquables)...">${escapeHtmlAdmin(u.noteTexte||'')}</textarea>
+            <label>Photos</label>
+            <div id="sim-a-note-photos" class="note-photos-grid-admin"></div>
+            <input type="file" id="sim-a-note-photo-input" accept="image/*" class="hidden">
+            <button type="button" class="btn-sm" id="btn-sim-add-note-photo" style="margin-top:8px;">+ Ajouter une photo</button>
+            <button class="btn-sm gold" id="btn-sim-save-note" style="margin-top:14px;">Enregistrer la note</button>
+            <div id="sim-a-note-msg" class="sub" style="margin-top:8px;"></div>
+          </div>
 
           <div class="sim-section">
             <h3>Annonces disponibles à ${u.ville || '—'} (en tant que cet artisan)</h3>
@@ -1414,6 +1523,142 @@
       </div>`;
     document.getElementById('sim-close').addEventListener('click', closeModal);
     document.getElementById('sim-bg').addEventListener('click', (e) => { if(e.target.id === 'sim-bg') closeModal(); });
+
+    // --- photo profil ---
+    const photoPreview = document.getElementById('sim-a-photo-preview');
+    photoPreview.addEventListener('click', () => { if(simPhotoDataUrl) openZoomOverlay(simPhotoDataUrl); });
+    document.getElementById('sim-a-photo').addEventListener('change', async () => {
+      const file = document.getElementById('sim-a-photo').files[0];
+      if(!file) return;
+      try{
+        simPhotoDataUrl = await resizeImageToDataUrl(file, 500, 0.75);
+        photoPreview.src = simPhotoDataUrl; photoPreview.classList.remove('hidden'); photoPreview.style.cursor = 'zoom-in';
+      }catch(e){ console.error(e); }
+    });
+
+    // --- disponibilité ---
+    document.getElementById('btn-sim-a-dispo').addEventListener('click', (e) => {
+      disponible = !disponible;
+      e.target.textContent = disponible ? 'Disponible ✓' : 'Indisponible';
+      e.target.classList.toggle('gold', disponible);
+    });
+
+    // --- enregistrer le profil ---
+    document.getElementById('btn-sim-save-artisan-profile').addEventListener('click', async () => {
+      const denomination = document.getElementById('sim-a-denom').value.trim();
+      const metiers = document.getElementById('sim-a-metiers').value.split(',').map(s => s.trim()).filter(Boolean);
+      const villes = document.getElementById('sim-a-villes').value.split(',').map(s => s.trim()).filter(Boolean);
+      const telephone = document.getElementById('sim-a-tel').value.trim();
+      const email = document.getElementById('sim-a-email').value.trim();
+      const msgBox = document.getElementById('sim-a-profile-msg');
+      if(!denomination){ msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "La dénomination sociale est requise."; return; }
+      if(!villes.length){ msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Indiquez au moins une ville d'intervention."; return; }
+      const btn = document.getElementById('btn-sim-save-artisan-profile');
+      btn.disabled = true;
+      try{
+        const payload = {
+          denominationSociale: denomination, prenom: denomination,
+          metiers, villesIntervention: villes, ville: villes[0],
+          telephone, email, photo: simPhotoDataUrl || null,
+          disponible
+        };
+        await updateDoc(doc(db, "users", u.uid), payload);
+        Object.assign(u, payload);
+        const uRef = allUsers.find(x => x.uid === u.uid);
+        if(uRef) Object.assign(uRef, payload);
+        msgBox.style.color = 'var(--vert)';
+        msgBox.textContent = "Profil enregistré.";
+        renderProfils(); renderFeatured();
+      }catch(e){ console.error(e); msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Erreur : " + (e.message||e.code||"inconnue"); }
+      btn.disabled = false;
+    });
+
+    // --- horaires ---
+    function renderHorairesJoursDOMAdmin(){
+      const box = document.getElementById('sim-a-horaires-jours');
+      box.innerHTML = JOURS_SEMAINE_ADMIN.map(j => {
+        const s = horairesState[j.key];
+        return `
+          <div class="horaire-jour-row-admin" data-jour="${j.key}">
+            <div class="horaire-jour-nom-admin">${j.label}</div>
+            <button type="button" class="btn-sm ${s.ouvert ? 'gold' : ''}" data-role="toggle" style="min-width:64px;">${s.ouvert ? 'Ouvert' : 'Fermé'}</button>
+            ${s.ouvert
+              ? `<span style="display:flex; align-items:center; gap:6px; margin-left:auto; font-size:13px;"><input type="time" data-role="debut" value="${s.debut}" style="padding:6px 8px; border:1px solid var(--bordure); border-radius:6px;"> à <input type="time" data-role="fin" value="${s.fin}" style="padding:6px 8px; border:1px solid var(--bordure); border-radius:6px;"></span>`
+              : `<span class="sub" style="margin-left:auto;">Fermé</span>`}
+          </div>`;
+      }).join('');
+      box.querySelectorAll('.horaire-jour-row-admin').forEach(row => {
+        const jour = row.dataset.jour;
+        row.querySelector('[data-role="toggle"]').addEventListener('click', () => {
+          horairesState[jour].ouvert = !horairesState[jour].ouvert;
+          renderHorairesJoursDOMAdmin();
+        });
+        const debutInput = row.querySelector('[data-role="debut"]');
+        const finInput = row.querySelector('[data-role="fin"]');
+        if(debutInput) debutInput.addEventListener('change', () => { horairesState[jour].debut = debutInput.value; });
+        if(finInput) finInput.addEventListener('change', () => { horairesState[jour].fin = finInput.value; });
+      });
+    }
+    renderHorairesJoursDOMAdmin();
+
+    document.getElementById('btn-sim-save-horaires').addEventListener('click', async () => {
+      const msgBox = document.getElementById('sim-a-horaires-msg');
+      const btn = document.getElementById('btn-sim-save-horaires');
+      btn.disabled = true;
+      try{
+        const resume = getHorairesJoursResumeAdmin(horairesState);
+        await updateDoc(doc(db, "users", u.uid), { horairesJours: horairesState, horaires: resume });
+        u.horairesJours = horairesState; u.horaires = resume;
+        msgBox.style.color = 'var(--vert)';
+        msgBox.textContent = "Horaires enregistrés.";
+      }catch(e){ console.error(e); msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Erreur : " + (e.message||e.code||"inconnue"); }
+      btn.disabled = false;
+    });
+
+    // --- note ---
+    document.getElementById('btn-sim-a-note-visible').addEventListener('click', (e) => {
+      noteVisible = !noteVisible;
+      e.target.textContent = noteVisible ? 'Visible sur le profil ✓' : 'Masquée';
+      e.target.classList.toggle('gold', noteVisible);
+    });
+    function renderSimNotePhotos(){
+      const box = document.getElementById('sim-a-note-photos');
+      box.innerHTML = notePhotos.map((url, i) => `
+        <div class="note-photo-thumb-admin" data-idx="${i}">
+          <img src="${url}">
+          <button type="button" class="note-photo-remove-admin" data-action="remove" data-idx="${i}">✕</button>
+        </div>`).join('');
+      box.querySelectorAll('img').forEach((img, i) => img.addEventListener('click', () => openZoomOverlay(notePhotos[i])));
+      box.querySelectorAll('[data-action="remove"]').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); notePhotos.splice(parseInt(btn.dataset.idx,10), 1); renderSimNotePhotos(); });
+      });
+    }
+    renderSimNotePhotos();
+    document.getElementById('btn-sim-add-note-photo').addEventListener('click', () => document.getElementById('sim-a-note-photo-input').click());
+    document.getElementById('sim-a-note-photo-input').addEventListener('change', async () => {
+      const file = document.getElementById('sim-a-note-photo-input').files[0];
+      if(!file) return;
+      try{
+        const dataUrl = await resizeImageToDataUrl(file, 1000, 0.72);
+        notePhotos.push(dataUrl);
+        renderSimNotePhotos();
+      }catch(e){ console.error(e); }
+      document.getElementById('sim-a-note-photo-input').value = '';
+    });
+    document.getElementById('btn-sim-save-note').addEventListener('click', async () => {
+      const noteTitre = document.getElementById('sim-a-note-titre').value.trim();
+      const noteTexte = document.getElementById('sim-a-note-texte').value.trim();
+      const msgBox = document.getElementById('sim-a-note-msg');
+      const btn = document.getElementById('btn-sim-save-note');
+      btn.disabled = true;
+      try{
+        await updateDoc(doc(db, "users", u.uid), { noteTitre, noteTexte, noteVisible, notePhotos });
+        u.noteTitre = noteTitre; u.noteTexte = noteTexte; u.noteVisible = noteVisible; u.notePhotos = notePhotos.slice();
+        msgBox.style.color = 'var(--vert)';
+        msgBox.textContent = "Note enregistrée.";
+      }catch(e){ console.error(e); msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Erreur : " + (e.message||e.code||"inconnue"); }
+      btn.disabled = false;
+    });
 
     const adsBox = document.getElementById('sim-artisan-ads');
     const villesArtisan = (u.villesIntervention && u.villesIntervention.length) ? u.villesIntervention : [u.ville];
