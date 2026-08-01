@@ -64,6 +64,18 @@
   .toggle.on{background:var(--vert);}
   .toggle .dot{position:absolute; top:3px; left:3px; width:24px; height:24px; background:#fff; border-radius:50%; transition:transform .15s;}
   .toggle.on .dot{transform:translateX(22px);}
+  /* Sélecteur journalier des horaires d'ouverture (artisan) */
+  .horaires-jours{border:1px solid var(--bordure); border-radius:10px; overflow:hidden;}
+  .horaire-jour-row{display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--bordure);}
+  .horaire-jour-row:last-child{border-bottom:none;}
+  .horaire-jour-nom{font-weight:600; font-size:14px; width:44px; flex-shrink:0;}
+  .horaire-jour-toggle{width:40px; height:24px; border-radius:16px; background:var(--rouge); position:relative; cursor:pointer; border:none; flex-shrink:0;}
+  .horaire-jour-toggle.on{background:var(--vert);}
+  .horaire-jour-toggle .dot{position:absolute; top:2px; left:2px; width:20px; height:20px; background:#fff; border-radius:50%; transition:transform .15s;}
+  .horaire-jour-toggle.on .dot{transform:translateX(16px);}
+  .horaire-jour-times{display:flex; align-items:center; gap:6px; margin-left:auto; font-size:13px; color:var(--texte-doux);}
+  .horaire-jour-times input[type="time"]{width:88px; padding:6px 8px; border:1px solid var(--bordure); border-radius:6px; font-size:13px; font-family:'Inter',sans-serif;}
+  .horaire-jour-fermee{margin-left:auto; font-size:13px; color:var(--texte-doux);}
   h2{font-family:'Poppins',sans-serif; font-size:16px; color:var(--marine); margin-bottom:10px;}
   label{display:block; font-size:13px; font-weight:600; color:var(--marine); margin:12px 0 6px;}
   label:first-of-type{margin-top:0;}
@@ -97,9 +109,13 @@
   .hidden{display:none !important;}
   .modal-bg{position:fixed; inset:0; background:rgba(16,29,44,0.5); display:flex; align-items:flex-end; justify-content:center; z-index:2000;}
   .modal{background:#fff; border-radius:16px 16px 0 0; padding:22px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto;}
+  /* Sur ordinateur, toutes les fenêtres popup (fiches, avis, enchères, etc.) s'ouvrent centrées à
+     l'écran plutôt qu'en bulle collée en bas — seul le menu latéral (panneau qui glisse depuis la
+     droite) garde son propre style. */
   @media (min-width: 760px){
-    #ench-bg{ align-items:center; }
-    #ench-bg .modal{ border-radius:16px; }
+    .modal-bg{ align-items:center; }
+    .modal-bg .modal{ border-radius:16px; }
+    .modal-bg#menu-bg{ align-items:stretch; }
   }
   .modal-close{background:none; border:none; color:var(--texte-doux); font-size:14px; font-weight:600; float:right; cursor:pointer;}
   .photo-zoom-bg{position:fixed; inset:0; background:rgba(10,16,24,0.9); display:flex; align-items:center; justify-content:center; z-index:2500; padding:24px;}
@@ -309,7 +325,7 @@
     <label>Téléphone</label>
     <input type="text" id="a-telephone" placeholder="06 00 00 00 00">
     <label>Jours et horaires d'ouverture</label>
-    <textarea id="a-horaires" placeholder="Lun-Ven : 8h-18h&#10;Sam : 9h-12h" style="min-height:56px;"></textarea>
+    <div id="a-horaires-jours" class="horaires-jours"></div>
     <button class="primary" id="btn-save-artisan-profile">Enregistrer</button>
     <div class="locate-row">
       <div class="locate-sub" id="a-locate-status">Position non renseignée</div>
@@ -441,6 +457,64 @@
     box.appendChild(addChip);
   }
 
+  // ---------- Sélecteur journalier des horaires d'ouverture (artisan) ----------
+  const JOURS_SEMAINE = [
+    { key: 'lun', label: 'Lun' }, { key: 'mar', label: 'Mar' }, { key: 'mer', label: 'Mer' },
+    { key: 'jeu', label: 'Jeu' }, { key: 'ven', label: 'Ven' }, { key: 'sam', label: 'Sam' }, { key: 'dim', label: 'Dim' }
+  ];
+  let horairesJoursState = {};
+  function renderHorairesJours(existing){
+    // existing = objet structuré { lun: {ouvert:true, debut:'08:00', fin:'18:00'}, ... } déjà enregistré, ou vide.
+    horairesJoursState = {};
+    JOURS_SEMAINE.forEach(j => {
+      const d = (existing && existing[j.key]) || {};
+      horairesJoursState[j.key] = { ouvert: d.ouvert !== undefined ? d.ouvert : (j.key !== 'dim'), debut: d.debut || '08:00', fin: d.fin || '18:00' };
+    });
+    const box = document.getElementById('a-horaires-jours');
+    box.innerHTML = JOURS_SEMAINE.map(j => {
+      const s = horairesJoursState[j.key];
+      return `
+        <div class="horaire-jour-row" data-jour="${j.key}">
+          <div class="horaire-jour-nom">${j.label}</div>
+          <button type="button" class="horaire-jour-toggle${s.ouvert ? ' on' : ''}" data-role="toggle"><span class="dot"></span></button>
+          ${s.ouvert
+            ? `<div class="horaire-jour-times"><input type="time" data-role="debut" value="${s.debut}"> à <input type="time" data-role="fin" value="${s.fin}"></div>`
+            : `<div class="horaire-jour-fermee">Fermé</div>`}
+        </div>`;
+    }).join('');
+    box.querySelectorAll('.horaire-jour-row').forEach(row => {
+      const jour = row.dataset.jour;
+      row.querySelector('[data-role="toggle"]').addEventListener('click', () => {
+        horairesJoursState[jour].ouvert = !horairesJoursState[jour].ouvert;
+        renderHorairesJours(horairesJoursState);
+      });
+      const debutInput = row.querySelector('[data-role="debut"]');
+      const finInput = row.querySelector('[data-role="fin"]');
+      if(debutInput) debutInput.addEventListener('change', () => { horairesJoursState[jour].debut = debutInput.value; });
+      if(finInput) finInput.addEventListener('change', () => { horairesJoursState[jour].fin = finInput.value; });
+    });
+  }
+  function getHorairesJoursResume(){
+    // Regroupe les jours consécutifs ayant les mêmes horaires pour un résumé lisible, ex "Lun-Ven : 8h-18h".
+    const ouverts = JOURS_SEMAINE.filter(j => horairesJoursState[j.key].ouvert);
+    if(!ouverts.length) return '';
+    const lignes = [];
+    let i = 0;
+    while(i < ouverts.length){
+      let j = i;
+      const s0 = horairesJoursState[ouverts[i].key];
+      while(j + 1 < ouverts.length){
+        const sNext = horairesJoursState[ouverts[j+1].key];
+        const consecutif = JOURS_SEMAINE.findIndex(x => x.key === ouverts[j+1].key) === JOURS_SEMAINE.findIndex(x => x.key === ouverts[j].key) + 1;
+        if(consecutif && sNext.debut === s0.debut && sNext.fin === s0.fin) j++; else break;
+      }
+      const label = i === j ? ouverts[i].label : `${ouverts[i].label}-${ouverts[j].label}`;
+      lignes.push(`${label} : ${s0.debut.replace(':','h')}-${s0.fin.replace(':','h')}`);
+      i = j + 1;
+    }
+    return lignes.join('\n');
+  }
+
   function addCustomMetierChip(){
     const input = document.getElementById('autre-metier-input');
     const val = input.value.trim();
@@ -475,6 +549,11 @@
     document.getElementById('client-ads-card').classList.toggle('hidden', previewMode);
     document.getElementById('artisan-profile-card').classList.toggle('hidden', previewMode);
     document.getElementById('welcome-card').classList.toggle('hidden', previewMode);
+    // Dans la vue "Clients proches" (focus sur les annonces à proximité), la certification et les
+    // avis de l'artisan n'ont pas leur place ici : on les masque, seules Enchères Ville et la liste
+    // d'annonces restent visibles.
+    document.getElementById('artisan-cert-card').classList.toggle('hidden', previewMode);
+    document.getElementById('artisan-reviews-card').classList.toggle('hidden', previewMode);
 
     if(isArtisanRole) { loadAdsWall(); document.getElementById('my-reviews-summary').innerHTML = renderStars(currentData.noteMoyenne || 0, currentData.nbAvis || 0); }
     else { loadArtisansList(); loadMyAds(); }
@@ -517,7 +596,7 @@
       document.getElementById('a-villes').value = (currentData.villesIntervention || []).join(', ');
       document.getElementById('a-adresse').value = currentData.adresse || '';
       document.getElementById('a-telephone').value = currentData.telephone || '';
-      document.getElementById('a-horaires').value = currentData.horaires || '';
+      renderHorairesJours(currentData.horairesJours || null);
       if(currentData.lat){ document.getElementById('a-locate-status').textContent = "Position enregistrée ✓"; document.getElementById('btn-remove-locate-artisan').classList.remove('hidden'); }
       renderCertificationCard();
       document.getElementById('btn-open-encheres').addEventListener('click', openEncheresVille);
@@ -878,13 +957,14 @@
     const villes = document.getElementById('a-villes').value.split(',').map(v=>v.trim()).filter(Boolean);
     const adresse = document.getElementById('a-adresse').value.trim();
     const telephone = document.getElementById('a-telephone').value.trim();
-    const horaires = document.getElementById('a-horaires').value.trim();
+    const horairesJours = horairesJoursState;
+    const horaires = getHorairesJoursResume();
     if(metiers.length === 0 || villes.length === 0){
       showMsg("Choisissez au moins un métier et une ville.", "error"); return;
     }
     try {
-      await updateDoc(doc(db, "users", currentUser.uid), { metiers, villesIntervention: villes, adresse, telephone, horaires });
-      currentData.metiers = metiers; currentData.villesIntervention = villes; currentData.adresse = adresse; currentData.telephone = telephone; currentData.horaires = horaires;
+      await updateDoc(doc(db, "users", currentUser.uid), { metiers, villesIntervention: villes, adresse, telephone, horaires, horairesJours });
+      currentData.metiers = metiers; currentData.villesIntervention = villes; currentData.adresse = adresse; currentData.telephone = telephone; currentData.horaires = horaires; currentData.horairesJours = horairesJours;
       flashSaved(btn);
     } catch(err){
       showMsg("Échec de l'enregistrement : " + (err.message || err.code || "erreur inconnue") + ". Votre compte est peut-être corrompu — déconnectez-vous et reconnectez-vous.", "error");
@@ -1112,7 +1192,9 @@
   function initMap(containerId, existing){
     if(existing) { existing.remove(); }
     const map = L.map(containerId, { zoomControl: true, attributionControl: false }).setView([46.6, 2.4], 5);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
+    // Fond de carte "Voyager" (CARTO) : plus moderne et coloré que le gris plat précédent,
+    // avec les routes, villes et reliefs visibles, tout en restant sobre.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
     return map;
   }
 
