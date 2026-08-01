@@ -1396,33 +1396,35 @@
 
     allDocs.forEach(x => { const b = bestByArtisan[x.id]; if(b){ x.encherMontant = b.montant; x.encherT = b.t; } });
 
-    const encherisDocs = allDocs.filter(x => x.encherMontant != null)
-      .sort((a, b) => (b.encherMontant - a.encherMontant) || (a.encherT - b.encherT));
-
-    // Le reste de la liste (hors enchères) respecte la position choisie manuellement par
-    // l'administration dans la console (onglet "Mise en avant"), plutôt qu'une rotation automatique.
-    const poolDocs = allDocs.filter(x => x.encherMontant == null);
-    const positioned = poolDocs.filter(x => x.data.featuredPosition != null)
+    // Ordre d'affichage, du plus prioritaire au moins prioritaire :
+    //  1. Position fixée manuellement dans la console admin ("Mise en avant") : elle FORCE le
+    //     classement à cet emplacement exact, même au-dessus des enchérisseurs.
+    //  2. Enchérisseurs (montant le plus élevé en premier).
+    //  3. Les autres, par ordre chronologique (date d'inscription).
+    const positioned = allDocs.filter(x => x.data.featuredPosition != null)
       .sort((a, b) => (a.data.featuredPosition - b.data.featuredPosition) || ((a.data.featuredAt||0) - (b.data.featuredAt||0)));
-    // Les artisans qui ne payent pas (ni enchère, ni position fixe) tournent de manière
-    // aléatoire à chaque chargement de la liste : pas d'ordre figé pour eux.
-    const unpositioned = poolDocs.filter(x => x.data.featuredPosition == null);
-    for(let i = unpositioned.length - 1; i > 0; i--){
-      const j = Math.floor(Math.random() * (i + 1));
-      [unpositioned[i], unpositioned[j]] = [unpositioned[j], unpositioned[i]];
-    }
-    const finalPool = new Array(poolDocs.length).fill(null);
+    const remaining = allDocs.filter(x => x.data.featuredPosition == null);
+
+    const encherisDocs = remaining.filter(x => x.encherMontant != null)
+      .sort((a, b) => (b.encherMontant - a.encherMontant) || (a.encherT - b.encherT));
+    const chronoDocs = remaining.filter(x => x.encherMontant == null)
+      .sort((a, b) => (a.data.createdAt?.seconds || 0) - (b.data.createdAt?.seconds || 0));
+    const baseOrder = [...encherisDocs, ...chronoDocs];
+
+    // On insère les positions forcées à leur emplacement exact dans la liste finale ; le reste
+    // suit l'ordre de base (enchères puis chronologie) dans les emplacements restants.
+    const finalList = new Array(allDocs.length).fill(null);
     positioned.forEach(x => {
       let idx = Math.max(0, x.data.featuredPosition - 1);
-      while(idx < finalPool.length && finalPool[idx] !== null) idx++;
-      if(idx >= finalPool.length) idx = finalPool.length - 1;
-      if(idx >= 0) finalPool[idx] = x;
+      while(idx < finalList.length && finalList[idx] !== null) idx++;
+      if(idx >= finalList.length) idx = finalList.length - 1;
+      if(idx >= 0) finalList[idx] = x;
     });
-    let ui = 0;
-    for(let i = 0; i < finalPool.length; i++){
-      if(finalPool[i] === null) finalPool[i] = unpositioned[ui++];
+    let bi = 0;
+    for(let i = 0; i < finalList.length; i++){
+      if(finalList[i] === null) finalList[i] = baseOrder[bi++];
     }
-    const orderedDocs = [...encherisDocs, ...finalPool.filter(Boolean)];
+    const orderedDocs = finalList.filter(Boolean);
 
     for(const s of orderedDocs){
       const d = s.data;
