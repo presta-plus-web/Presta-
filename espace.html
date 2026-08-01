@@ -2255,6 +2255,11 @@
   async function notifyMatchingArtisans(metier, ville, description, adId){
     try {
       const lienClient = window.location.origin + window.location.pathname.replace('espace.html', '') + 'espace.html?ad=' + adId;
+      // Le modèle EmailJS est générique (il affiche simplement {{description}}) : c'est donc ici,
+      // et uniquement ici, qu'on construit la phrase d'introduction "un client recherche...",
+      // propre à ce cas d'usage précis (à ne pas mettre dans le modèle, sinon elle s'affiche aussi
+      // dans les autres e-mails comme la confirmation d'enchère ou la certification).
+      const messageComplet = `Un client recherche un ${metier} à ${ville}.\n\n${description}`;
       // Firestore interdit deux "array-contains" dans la même requête :
       // on filtre par ville côté serveur, puis par métier côté code
       const q = query(collection(db, "users"),
@@ -2271,7 +2276,7 @@
           email_artisan: artisan.email,
           metier: metier,
           ville: ville,
-          description: description,
+          description: messageComplet,
           email_client: currentData.email,
           lien_client: lienClient,
           name: currentData.prenom + ' ' + currentData.nom
