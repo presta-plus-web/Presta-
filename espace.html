@@ -300,6 +300,7 @@
 
   <div class="card" id="artisans-list-card">
     <h2>Artisans près de chez vous</h2>
+    <input type="text" id="client-artisans-metier-search" placeholder="Rechercher un métier (ex : Plombier)" style="margin-bottom:12px;">
     <div class="map-box-outer" id="client-map-box">
       <div id="client-map" class="map-inner"></div>
       <button class="map-expand-btn" id="btn-expand-client-map">⤢</button>
@@ -1374,11 +1375,21 @@
       bounds.push([selfCoords.lat, selfCoords.lng]);
     }
 
-    // Artisans mis en avant (promotion) : ils passent en tête de liste, avec une rotation
-    // qui change au fil du temps si plusieurs artisans sont mis en avant en même temps.
     // Les comptes suspendus par l'administration ne doivent jamais apparaître ici.
-    const allDocs = snaps.docs.map(s => ({ id: s.id, data: s.data() })).filter(x => x.data.status !== 'suspended');
-    if(!allDocs.length){ box.innerHTML = '<div class="empty">Aucun artisan trouvé dans votre ville pour l\'instant.</div>'; if(bounds.length) clientMapInstance.setView(bounds[0], 12); return; }
+    // Barre de recherche par métier : indépendante du fait d'avoir publié une annonce ou non —
+    // le client peut chercher n'importe quel métier à tout moment pour filtrer la carte et la liste.
+    const metierTerm = (document.getElementById('client-artisans-metier-search')?.value || '').trim().toLowerCase();
+    let allDocs = snaps.docs.map(s => ({ id: s.id, data: s.data() })).filter(x => x.data.status !== 'suspended');
+    if(metierTerm){
+      allDocs = allDocs.filter(x => (x.data.metiers || []).some(m => m.toLowerCase().includes(metierTerm)));
+    }
+    if(!allDocs.length){
+      box.innerHTML = metierTerm
+        ? `<div class="empty">Aucun artisan "${metierTerm}" trouvé dans votre ville pour l'instant.</div>`
+        : '<div class="empty">Aucun artisan trouvé dans votre ville pour l\'instant.</div>';
+      if(bounds.length) clientMapInstance.setView(bounds[0], 12);
+      return;
+    }
     box.innerHTML = '';
 
     // Enchères Ville validées : déterminent le classement "Top recommandations".
@@ -1474,6 +1485,17 @@
 
     if(bounds.length === 1) clientMapInstance.setView(bounds[0], 12);
     else if(bounds.length > 1) clientMapInstance.fitBounds(bounds, { padding: [24,24] });
+  }
+
+  // Recherche par métier sur "Artisans près de chez vous" : filtre indépendamment de toute
+  // annonce publiée, avec un léger délai pour ne pas relancer la recherche à chaque frappe.
+  let artisansMetierSearchTimer = null;
+  const artisansMetierSearchInput = document.getElementById('client-artisans-metier-search');
+  if(artisansMetierSearchInput){
+    artisansMetierSearchInput.addEventListener('input', () => {
+      clearTimeout(artisansMetierSearchTimer);
+      artisansMetierSearchTimer = setTimeout(() => loadArtisansList(), 350);
+    });
   }
 
   // Affiche une photo en entier (sans recadrage), au-dessus de la fenêtre en cours.
