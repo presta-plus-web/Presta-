@@ -144,6 +144,18 @@
   }
   .modal-box h2{ font-family:'Poppins',sans-serif; font-size:17px; color:var(--marine); margin-bottom:14px; padding-right:60px; }
   .doc-thumb{ width:100%; max-height:280px; object-fit:contain; border-radius:8px; border:1px solid var(--bordure); margin-top:8px; background:#f5f5f5; }
+  .star-picker{ font-size:28px; letter-spacing:4px; color:#D8DCE0; cursor:pointer; }
+  .star-picker span.picked{ color:var(--or); }
+  .sim-section{ margin-top:22px; padding-top:18px; border-top:1px solid var(--bordure); }
+  .sim-section h3{ font-family:'Poppins',sans-serif; font-size:15px; color:var(--marine); margin-bottom:10px; }
+  textarea.admin-textarea{
+    width:100%; background:var(--fond); border:1.5px solid var(--bordure); color:var(--texte);
+    padding:12px 14px; border-radius:8px; font-size:15px; font-family:'Inter', sans-serif; min-height:80px; resize:vertical;
+  }
+  select.admin-select{
+    width:100%; background:var(--fond); border:1.5px solid var(--bordure); color:var(--texte);
+    padding:12px 14px; border-radius:8px; font-size:15px; font-family:'Inter', sans-serif;
+  }
 </style>
 </head>
 <body>
@@ -1153,8 +1165,10 @@
           <div class="sub">${u.ville || ''}${u.telephone ? ' — ' + u.telephone : ''}</div>
         </div>
         <div class="row-actions">
+          <button class="btn-sm gold" data-action="interact">Voir / Interagir</button>
           <button class="btn-sm danger" data-action="delete">Supprimer</button>
         </div>`;
+      el.querySelector('[data-action="interact"]').addEventListener('click', () => openProfilSimulateModal(u));
       el.querySelector('[data-action="delete"]').addEventListener('click', async () => {
         if(!confirm(`Supprimer le profil de ${u.prenom||''} ${u.nom||''} ?`)) return;
         await deleteDoc(doc(db, "users", u.uid));
@@ -1166,6 +1180,300 @@
     });
   }
   document.getElementById('profils-search').addEventListener('input', renderProfils);
+
+  // ---------- SIMULATION / INTERACTION PROFIL ----------
+  // Permet, pour un profil créé depuis la console, d'ouvrir un "rendu" interactif comme si on
+  // était réellement connecté sur ce compte : poster une annonce et donner des avis côté client,
+  // parcourir les annonces disponibles et contacter des clients côté artisan. Toutes les écritures
+  // utilisent exactement les mêmes collections/champs Firestore que l'application réelle.
+  const METIERS = ["Plombier","Électricien","Maçon","Peintre","Menuisier","Chauffagiste","Autre"];
+
+  function metierOptionsHtml(){
+    return METIERS.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+
+  function renderStarsSimple(avg, count){
+    avg = avg || 0; count = count || 0;
+    let html = '<span style="letter-spacing:2px;">';
+    for(let i = 1; i <= 5; i++){ html += `<span style="color:${i <= Math.round(avg) ? 'var(--or)' : '#D8DCE0'};">★</span>`; }
+    html += `</span> <span class="sub" style="display:inline;">${avg.toFixed(1)} (${count} avis)</span>`;
+    return html;
+  }
+
+  async function recomputeArtisanRatingAdmin(artisanId){
+    const q = query(collection(db, "reviews"), where("artisanId", "==", artisanId));
+    const snaps = await getDocs(q);
+    let total = 0, count = 0;
+    snaps.forEach(s => { total += s.data().note; count++; });
+    const avg = count ? total / count : 0;
+    await updateDoc(doc(db, "users", artisanId), { noteMoyenne: avg, nbAvis: count });
+    const u = allUsers.find(x => x.uid === artisanId);
+    if(u){ u.noteMoyenne = avg; u.nbAvis = count; }
+  }
+
+  // Chaque type de profil ouvre uniquement les parties qui le concernent : client -> annonces/avis,
+  // artisan -> rendu + annonces disponibles/contact.
+  function openProfilSimulateModal(u){
+    if(u.role === 'artisan') renderArtisanSimulate(u);
+    else renderClientSimulate(u);
+  }
+
+  // ----- CLIENT : poster une annonce + donner un avis à un artisan, comme un vrai client -----
+  function renderClientSimulate(u){
+    const root = document.getElementById('modal-root');
+    root.innerHTML = `
+      <div class="modal-bg" id="sim-bg">
+        <div class="modal-box" style="max-width:640px;">
+          <button class="modal-close" id="sim-close">Fermer</button>
+          <h2>${u.prenom||''} ${u.nom||''} <span class="tag role-client">Client</span></h2>
+          <div class="sub">${u.ville || 'ville non renseignée'}${u.telephone ? ' — ' + u.telephone : ''}${u.email ? ' — ' + u.email : ''}</div>
+          <div class="sub" style="margin-top:4px; color:var(--texte-doux);">Ceci simule ce que ferait réellement ce client dans l'application.</div>
+
+          <div class="sim-section">
+            <h3>Poster une annonce (en tant que ce client)</h3>
+            <label>Métier recherché</label>
+            <select class="admin-select" id="sim-ad-metier">${metierOptionsHtml()}</select>
+            <label>Description</label>
+            <textarea class="admin-textarea" id="sim-ad-desc" placeholder="Décrivez la demande..."></textarea>
+            <label>Photo (optionnel)</label>
+            <input type="file" id="sim-ad-photo" accept="image/*">
+            <img id="sim-ad-photo-preview" class="hidden" style="width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-top:8px;">
+            <button class="btn-sm gold" id="btn-sim-post-ad" style="margin-top:10px;">Publier l'annonce</button>
+            <div id="sim-ad-msg" class="sub" style="margin-top:8px;"></div>
+          </div>
+
+          <div class="sim-section">
+            <h3>Ses annonces</h3>
+            <div id="sim-client-ads"><div class="empty">Chargement...</div></div>
+          </div>
+
+          <div class="sim-section">
+            <h3>Donner un avis à un artisan (en tant que ce client)</h3>
+            <input type="text" id="sim-review-artisan-search" placeholder="Rechercher un artisan par nom ou ville...">
+            <div id="sim-review-artisan-results" style="margin-top:8px; max-height:170px; overflow-y:auto;"></div>
+            <div id="sim-review-selected" class="sub" style="margin-top:10px;"></div>
+            <div class="star-picker" id="sim-star-picker" style="margin-top:10px;">
+              <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+            </div>
+            <textarea class="admin-textarea" id="sim-review-text" placeholder="Commentaire (optionnel)" style="margin-top:10px;"></textarea>
+            <button class="btn-sm gold" id="btn-sim-post-review" style="margin-top:10px;" disabled>Publier l'avis</button>
+            <div id="sim-review-msg" class="sub" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('sim-close').addEventListener('click', closeModal);
+    document.getElementById('sim-bg').addEventListener('click', (e) => { if(e.target.id === 'sim-bg') closeModal(); });
+
+    let simAdPhotoDataUrl = null;
+    document.getElementById('sim-ad-photo').addEventListener('change', async () => {
+      const file = document.getElementById('sim-ad-photo').files[0];
+      if(!file) return;
+      try{
+        simAdPhotoDataUrl = await resizeImageToDataUrl(file, 900, 0.75);
+        const prev = document.getElementById('sim-ad-photo-preview');
+        prev.src = simAdPhotoDataUrl; prev.classList.remove('hidden');
+      }catch(e){ console.error(e); }
+    });
+
+    async function loadSimClientAds(){
+      const box = document.getElementById('sim-client-ads');
+      box.innerHTML = '<div class="empty">Chargement...</div>';
+      const q = query(collection(db, "ads"), where("clientId", "==", u.uid));
+      const snaps = await getDocs(q);
+      if(snaps.empty){ box.innerHTML = '<div class="empty">Aucune annonce pour l\'instant.</div>'; return; }
+      box.innerHTML = '';
+      snaps.forEach(s => {
+        const a = s.data();
+        const el = document.createElement('div');
+        el.className = 'list-row';
+        el.innerHTML = `
+          <div class="info">
+            <div class="title">${a.metier} <span class="tag status-${a.status==='ouverte'?'active':'suspended'}">${a.status==='ouverte'?'Ouverte':'Fermée'}</span></div>
+            <div class="sub">${a.description||''}</div>
+          </div>
+          <div class="row-actions"><button class="btn-sm danger" data-action="del">Supprimer</button></div>`;
+        el.querySelector('[data-action="del"]').addEventListener('click', async () => {
+          if(!confirm("Supprimer cette annonce ?")) return;
+          await deleteDoc(doc(db, "ads", s.id));
+          loadSimClientAds();
+          await loadAds(); renderAds();
+        });
+        box.appendChild(el);
+      });
+    }
+    loadSimClientAds();
+
+    document.getElementById('btn-sim-post-ad').addEventListener('click', async () => {
+      let metier = document.getElementById('sim-ad-metier').value;
+      const description = document.getElementById('sim-ad-desc').value.trim();
+      const msgBox = document.getElementById('sim-ad-msg');
+      if(!description){ msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Décrivez la demande."; return; }
+      const btn = document.getElementById('btn-sim-post-ad');
+      btn.disabled = true;
+      try{
+        await addDoc(collection(db, "ads"), {
+          clientId: u.uid, nom: u.nom||'', prenom: u.prenom||'',
+          email: u.email||'', telephone: u.telephone||'',
+          telephoneVisible: true, emailVisible: true,
+          adresse: '', adresseVisible: true,
+          photo: u.photo||null, photoAnnonce: simAdPhotoDataUrl || null,
+          ville: u.ville, metier, description, status: 'ouverte', createdAt: serverTimestamp()
+        });
+        msgBox.style.color = 'var(--vert)';
+        msgBox.textContent = "Annonce publiée.";
+        document.getElementById('sim-ad-desc').value = '';
+        document.getElementById('sim-ad-photo').value = '';
+        document.getElementById('sim-ad-photo-preview').classList.add('hidden');
+        simAdPhotoDataUrl = null;
+        loadSimClientAds();
+        await loadAds(); renderAds();
+      }catch(e){ console.error(e); msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Erreur : " + (e.message||e.code||"inconnue"); }
+      btn.disabled = false;
+    });
+
+    // --- donner un avis à un artisan ---
+    let selectedArtisan = null;
+    let chosenStars = 0;
+    const searchInput = document.getElementById('sim-review-artisan-search');
+    const resultsBox = document.getElementById('sim-review-artisan-results');
+    function renderArtisanSearchResults(){
+      const term = searchInput.value.trim().toLowerCase();
+      if(!term){ resultsBox.innerHTML = ''; return; }
+      const matches = allUsers.filter(x => x.role === 'artisan' && [x.prenom, x.nom, x.ville].filter(Boolean).join(' ').toLowerCase().includes(term)).slice(0, 8);
+      if(!matches.length){ resultsBox.innerHTML = '<div class="empty">Aucun artisan trouvé.</div>'; return; }
+      resultsBox.innerHTML = matches.map(a => `<div class="list-row" data-uid="${a.uid}" style="cursor:pointer; padding:10px 12px;"><div class="info"><div class="title" style="font-size:14px;">${a.prenom||''} ${a.nom||''}</div><div class="sub">${a.ville||''}</div></div></div>`).join('');
+      resultsBox.querySelectorAll('[data-uid]').forEach(row => {
+        row.addEventListener('click', () => {
+          selectedArtisan = matches.find(a => a.uid === row.dataset.uid);
+          document.getElementById('sim-review-selected').textContent = `Artisan sélectionné : ${selectedArtisan.prenom||''} ${selectedArtisan.nom||''}`;
+          document.getElementById('btn-sim-post-review').disabled = false;
+          resultsBox.innerHTML = '';
+          searchInput.value = '';
+        });
+      });
+    }
+    searchInput.addEventListener('input', renderArtisanSearchResults);
+
+    const starEls = document.querySelectorAll('#sim-star-picker span');
+    starEls.forEach(s => {
+      s.addEventListener('click', () => {
+        chosenStars = parseInt(s.dataset.v, 10);
+        starEls.forEach(x => x.classList.toggle('picked', parseInt(x.dataset.v, 10) <= chosenStars));
+      });
+    });
+
+    document.getElementById('btn-sim-post-review').addEventListener('click', async () => {
+      const msgBox = document.getElementById('sim-review-msg');
+      if(!selectedArtisan){ msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Choisissez un artisan."; return; }
+      if(chosenStars === 0){ msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Choisissez une note en étoiles."; return; }
+      const commentaire = document.getElementById('sim-review-text').value.trim();
+      const btn = document.getElementById('btn-sim-post-review');
+      btn.disabled = true;
+      try{
+        await addDoc(collection(db, "reviews"), {
+          artisanId: selectedArtisan.uid, clientId: u.uid,
+          clientNom: (u.prenom||'') + ' ' + (u.nom||''),
+          note: chosenStars, commentaire, createdAt: serverTimestamp()
+        });
+        await recomputeArtisanRatingAdmin(selectedArtisan.uid);
+        msgBox.style.color = 'var(--vert)';
+        msgBox.textContent = "Avis publié.";
+        document.getElementById('sim-review-text').value = '';
+        chosenStars = 0;
+        starEls.forEach(x => x.classList.remove('picked'));
+        selectedArtisan = null;
+        document.getElementById('sim-review-selected').textContent = '';
+        btn.disabled = true;
+      }catch(e){ console.error(e); msgBox.style.color = 'var(--rouge)'; msgBox.textContent = "Erreur : " + (e.message||e.code||"inconnue"); btn.disabled = false; }
+    });
+  }
+
+  // ----- ARTISAN : voir le rendu + parcourir/contacter les annonces disponibles, comme un vrai artisan -----
+  function renderArtisanSimulate(u){
+    const root = document.getElementById('modal-root');
+    const nomAffiche = u.denominationSociale || ((u.prenom||'') + ' ' + (u.nom||'')).trim() || 'Artisan';
+    root.innerHTML = `
+      <div class="modal-bg" id="sim-bg">
+        <div class="modal-box" style="max-width:640px;">
+          <button class="modal-close" id="sim-close">Fermer</button>
+          <h2>${nomAffiche} <span class="tag role-artisan">Artisan</span></h2>
+          <div class="sub">${(u.metiers||[]).join(', ') || 'métier non renseigné'} — ${u.ville || 'ville non renseignée'}</div>
+          <div style="margin-top:8px;">${renderStarsSimple(u.noteMoyenne, u.nbAvis)}</div>
+          <div class="sub" style="margin-top:8px; color:var(--texte-doux);">Ceci simule ce que ferait réellement cet artisan dans l'application.</div>
+
+          <div class="sim-section">
+            <h3>Annonces disponibles à ${u.ville || '—'} (en tant que cet artisan)</h3>
+            <div id="sim-artisan-ads"><div class="empty">Chargement...</div></div>
+          </div>
+
+          <div class="sim-section">
+            <h3>Avis reçus</h3>
+            <div id="sim-artisan-reviews"><div class="empty">Chargement...</div></div>
+          </div>
+        </div>
+      </div>`;
+    document.getElementById('sim-close').addEventListener('click', closeModal);
+    document.getElementById('sim-bg').addEventListener('click', (e) => { if(e.target.id === 'sim-bg') closeModal(); });
+
+    const adsBox = document.getElementById('sim-artisan-ads');
+    const villesArtisan = (u.villesIntervention && u.villesIntervention.length) ? u.villesIntervention : [u.ville];
+    const localAds = allAds.filter(a => a.status === 'ouverte' && villesArtisan.includes(a.ville));
+    if(!localAds.length){
+      adsBox.innerHTML = '<div class="empty">Aucune annonce ouverte dans cette ville pour l\'instant.</div>';
+    } else {
+      adsBox.innerHTML = '';
+      localAds.forEach(a => {
+        const el = document.createElement('div');
+        el.className = 'list-row';
+        el.style.flexDirection = 'column';
+        el.style.alignItems = 'stretch';
+        el.innerHTML = `
+          <div class="info">
+            <div class="title">${a.metier}</div>
+            <div class="sub">${a.prenom||''} ${a.nom||''} — ${a.ville}</div>
+            <div class="sub" style="margin-top:4px;">${a.description||''}</div>
+          </div>
+          <div style="margin-top:10px;">
+            <textarea class="admin-textarea" data-role="msg-text" placeholder="Message à envoyer à ce client..." style="min-height:60px;"></textarea>
+            <button class="btn-sm gold" data-action="contact" style="margin-top:8px;">Contacter ce client</button>
+            <div class="sub" data-role="contact-status" style="margin-top:6px;"></div>
+          </div>`;
+        el.querySelector('[data-action="contact"]').addEventListener('click', async (e) => {
+          const text = el.querySelector('[data-role="msg-text"]').value.trim();
+          const statusEl = el.querySelector('[data-role="contact-status"]');
+          if(!text){ statusEl.style.color = 'var(--rouge)'; statusEl.textContent = "Écrivez un message."; return; }
+          e.target.disabled = true;
+          try{
+            await addDoc(collection(db, "messages"), {
+              fromId: u.uid, toId: a.clientId,
+              fromName: nomAffiche, photo: u.photo || null,
+              text, read: false, createdAt: serverTimestamp()
+            });
+            statusEl.style.color = 'var(--vert)';
+            statusEl.textContent = "Message envoyé.";
+            el.querySelector('[data-role="msg-text"]').value = '';
+          }catch(err){ console.error(err); statusEl.style.color = 'var(--rouge)'; statusEl.textContent = "Erreur d'envoi."; }
+          e.target.disabled = false;
+        });
+        adsBox.appendChild(el);
+      });
+    }
+
+    const reviewsBox = document.getElementById('sim-artisan-reviews');
+    (async () => {
+      const q = query(collection(db, "reviews"), where("artisanId", "==", u.uid));
+      const snaps = await getDocs(q);
+      if(snaps.empty){ reviewsBox.innerHTML = '<div class="empty">Aucun avis pour l\'instant.</div>'; return; }
+      reviewsBox.innerHTML = '';
+      snaps.forEach(s => {
+        const r = s.data();
+        const el = document.createElement('div');
+        el.className = 'list-row';
+        el.innerHTML = `<div class="info"><div class="title">${'★'.repeat(r.note)}${'☆'.repeat(5 - r.note)} — ${r.clientNom||''}</div><div class="sub">${r.commentaire||''}</div></div>`;
+        reviewsBox.appendChild(el);
+      });
+    })();
+  }
 </script>
 </body>
 </html>
