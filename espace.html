@@ -1328,13 +1328,12 @@
   let clientMapInstance = null, artisanMapInstance = null;
   function initMap(containerId, existing){
     if(existing) { existing.remove(); }
-    const map = L.map(containerId, { zoomControl: true, attributionControl: false }).setView([46.6, 2.4], 5);
-    // Fond de carte "Voyager" (CARTO) : plus moderne et coloré que le gris plat précédent,
-    // avec les routes, villes et reliefs visibles, tout en restant sobre.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(map);
-    return map;
+  const map = L.map(containerId, { zoomControl: true, attributionControl: true }).setView([46.6, 2.4], 5);
+  // Fond de carte "Voyager" (CARTO) : plus moderne et colore que le gris plat precedent,
+  // avec les routes, villes et reliefs visibles, tout en restant sobre.
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, subdomains: 'abc', attribution: '&copy; OpenStreetMap' }).addTo(map);    return map;
+  return map;
   }
-
   function selfIcon(){
     return L.divIcon({ className: '', html: '<div class="marker-self"></div>', iconSize: [16,16] });
   }
